@@ -87,7 +87,6 @@ Note:
 - Struttura download:
   - `/mnt/HDD_WD_1/downloads/movies`
   - `/mnt/HDD_WD_1/downloads/series`
-  - `/mnt/HDD_WD_1/downloads/incomplete`
   - proprietario `dante:media`, mode `2775`.
 - Il vecchio mount annidato `/mnt/media/HDD_WD_1` è stato rimosso. La copia pre-formattazione dei media è in `/mnt/backup/current/HDD_WD_1` (1,3 T).
 - Root no longer hosts qBittorrent downloads: il root pieno al 100% del 2026-11-17 è stato risolto spostando i download su HDD_WD_1.

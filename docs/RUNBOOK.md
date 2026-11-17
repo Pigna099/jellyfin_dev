@@ -105,7 +105,7 @@ Note:
 ## Storage download (qBittorrent)
 
 HDD dedicato: `/dev/sda1` (1,8 T) → ext4, label `HDD_WD_1`, mount `/mnt/HDD_WD_1`.
-Cartelle: `downloads/movies`, `downloads/series`, `downloads/incomplete` (`dante:media 2775`).
+Cartelle: `downloads/movies`, `downloads/series` (`dante:media 2775`). `incomplete` non è usata (`temp_path_enabled=false`) ed è stata rimossa.
 
 ```bash
 findmnt /mnt/HDD_WD_1
