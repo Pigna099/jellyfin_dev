@@ -71,6 +71,33 @@ Dopo un aggiornamento di Jellyfin:
 3. se le tab non compaiono, controllare i log Jellyfin e la compatibilità build (`/JellyfinEnhanced/host-compat`);
 4. la build per Jellyfin 10.11 è `Jellyfin.Plugin.JellyfinEnhanced_10.11.0.zip`.
 
+## UI “Richiedi film”
+
+La tab è composta da:
+
+- **Custom Tabs** (tab + HTML/CSS/JS) → `/srv/jellyfin/config/plugins/Custom Tabs_0.3.3.0`;
+- **File Transformation** → prerequisito;
+- **Jellyseerr Bridge** → pagina `/JellyseerrBridge/Page` e proxy API server-side.
+
+Configurazione:
+
+- Custom Tabs: `/Plugins/fbacd0b6-fd46-4a05-b0a4-2045d6a135b0/Configuration`
+- Seerr Bridge: `/Plugins/d2fcf9c8-c3c7-47e8-9dd6-8de9867e36bb/Configuration`
+
+Per riapplicare CSS, banner e traduzioni:
+
+```bash
+python3 /home/dante/docker/seerr/configure-request-ui.py
+```
+
+Per cambiare il contenuto della tab, modificare `CUSTOM_TABS_HTML` in `scripts/configure-request-ui.py` e rilanciare. Dopo una modifica potrebbe servire un **hard reload** (`Cmd+Shift+R`), perché Custom Tabs carica la config una volta per pagina.
+
+Note:
+
+- se la tab non compare, verificare che i tre plugin siano **Active** e che la config Custom Tabs abbia un elemento `Title="Richiedi film"`;
+- la tab non compare sui client TV nativi (è web UI);
+- le richieste della pagina sono attribuite all'account Seerr `seerr`; la ricerca Jellyfin (JE) le attribuisce all'utente.
+
 ## Radarr
 
 Root folder: `/mnt/media/movies`.
@@ -88,12 +115,13 @@ curl -s -H "X-Api-Key: $KEY" 'http://127.0.0.1:5056/api/v1/request?take=5' |
 ## Backup
 
 Pre: `/mnt/backup/config-backups/2026-11-17_1640`
-Post: `/mnt/backup/config-backups/2026-11-17_1725-post-request`
+Post-backend: `/mnt/backup/config-backups/2026-11-17_1725-post-request`
+Post-UI: `/mnt/backup/config-backups/2026-11-17_1745-post-request`
 
 Verifica:
 
 ```bash
-D=/mnt/backup/config-backups/2026-11-17_1725-post-request
+D=/mnt/backup/config-backups/2026-11-17_1745-post-request
 cd "$D" && sha256sum -c SHA256SUMS
 ```
 
