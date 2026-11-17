@@ -77,7 +77,7 @@ SECTION3 = """
 | Device | Size | FS | Mount | Uso | Libero |
 |---|---:|---|---|---|---:|
 | `nvme0n1p2` | 117 G | ext4 | `/` | sistema, Docker, appdata | **36 G (69% usato)** |
-| `sdb1` | 9,1 T | ext4 | `/mnt/media` | movies, series, music | **4,7 T** |
+| `sdb1` | 9,1 T | ext4 | `/mnt/media` | movies, series, music, FILM_T | **4,6 T** |
 | `sdc1` | 9,1 T | ext4 | `/mnt/backup` | snapshot media + config | **2,2 T** |
 | `sda1` | 1,8 T | **ext4** | `/mnt/HDD_WD_1` | download qBittorrent (film/serie) | **1,7 T** |
 
@@ -96,7 +96,8 @@ Note:
   - `/mnt/media/downloads` → `dante:media 2775`
   - `/mnt/media/pignify` → `dante:media 2775`
   - `/mnt/HDD_WD_1` → `dante:media 2775`
-- Monitorare root (36 G) e HDD_WD_1 (1,7 T).
+- **FILM_T ripristinato** il 2026-11-17 in `/mnt/media/FILM_T`: 1,2 T, 1109 file, `dante:media 2775`, dal backup `/mnt/backup/current/HDD_WD_1/FILM_T`; nessun file mancante (rimossi solo `.DS_Store`/`Thumbs.db`).
+- Monitorare root (36 G), HDD_WD_1 (1,7 T) e `/mnt/media` (4,6 T liberi).
 """
 
 SECTION4 = """
@@ -188,6 +189,7 @@ Tutti i backup hanno `SHA256SUMS` verificato; i DB hanno `PRAGMA integrity_check
 - **Non** esistono ancora timer automatici per il backup config/DB; farlo manualmente o aggiungere un timer.
 - I segreti (`.env`, API key, config qBittorrent, WireGuard, TLS) sono nei backup, con permessi `640 root:media`: trattarli come riservati.
 - Consigliato: copia off-site periodica dei soli config/DB (pochi GB).
+- **Attenzione backup media:** `MEDIA_backup_local.sh` ora include anche `/mnt/media/FILM_T` (1,2 T). La copia esiste già nello snapshot `HDD_WD_1`; valutare un exclude per evitare duplicazione (backup libero: 2,2 T).
 """
 
 SECTION9 = """
@@ -213,6 +215,7 @@ SECTION12 = """
 - [x] UI “Richiedi film” minimale con ricerca + riepilogo download.
 - [x] Formattare HDD_WD_1 ext4 e spostare i download qBittorrent.
 - [x] Fermare/disabilitare Plex.
+- [x] Ripristinare FILM_T in `/mnt/media/FILM_T` (1,2 T, 1109 file).
 - [ ] Rimuovere completamente Plex (snap + dati) quando confermato.
 - [ ] Aggiungere timer backup config/DB + copia off-site.
 - [ ] Test end-to-end: richiesta → download su HDD_WD_1 → import → visibile in Jellyfin.

@@ -135,6 +135,23 @@ Formattazione/mount (solo se serve rifare): operazione manuale distruttiva. Ferm
 
 Plex è **fermo e disabilitato**. Le librerie `FILM_T` e `TV Shows_T` puntavano al vecchio HDD_WD_1 e non sono più disponibili; la copia pre-formattazione è in `/mnt/backup/current/HDD_WD_1`.
 
+### Ripristino FILM_T
+
+Eseguito il 2026-11-17:
+
+```bash
+# sorgente: /mnt/backup/current/HDD_WD_1/FILM_T
+# destinazione: /mnt/media/FILM_T
+rsync -aH --partial --info=progress2 \
+  /mnt/backup/current/HDD_WD_1/FILM_T/ /mnt/media/FILM_T/
+chown -R dante:media /mnt/media/FILM_T
+find /mnt/media/FILM_T -type d -exec chmod 2775 {} \;
+chmod -R g+rwX /mnt/media/FILM_T
+```
+
+Risultato: **1,2 TB, 1109 file**, nessun file mancante; rimossi solo `.DS_Store`/`Thumbs.db`.
+`FILM_T` non è ancora una libreria Jellyfin: va aggiunta manualmente se serve (percorso `/media/FILM_T` dentro Jellyfin).
+
 Se `/` torna pieno: controllare `df -h /`, `du -sh /home/dante/Downloads/temp/*`, poi svuotare Docker build cache e journal:
 
 ```bash

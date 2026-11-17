@@ -223,6 +223,17 @@ sudo snap remove plexmediaserver
 # dati: /var/lib/plexmediaserver e /var/snap/plexmediaserver
 ```
 
+### FILM_T
+
+Ripristinato in **`/mnt/media/FILM_T`**:
+
+- 1,2 TB, 1109 file
+- proprietario `dante:media`, directory `2775`
+- sorgente: `/mnt/backup/current/HDD_WD_1/FILM_T`
+- nessun file mancante; rimossi solo `.DS_Store`/`Thumbs.db`
+- Plex è disabilitato, quindi la libreria Plex `FILM_T` non è attiva
+- non è stata aggiunta automaticamente come libreria Jellyfin
+
 ## Test eseguito
 
 Test end-to-end reale, poi ripulito:
