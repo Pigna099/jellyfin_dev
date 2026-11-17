@@ -65,8 +65,9 @@ La richiesta viene **auto-approvata** per gli utenti della famiglia; Radarr aggi
 3. Scrivi il titolo nella barra di ricerca e premi **Cerca**.
 4. Nei risultati premi **Richiedi** accanto al film.
 5. Compare **Richiesta inviata a Radarr**; Seerr/Radarr lavorano in background.
-6. Per lo stato completo: `http://192.168.1.30:5056` (Seerr) oppure la ricerca Jellyfin.
-7. Quando il film è importato e scansionato, appare nella libreria **Film** di Jellyfin.
+6. Sotto la barra vedi **Download in corso** con avanzamento percentuale e barra.
+7. Per lo stato completo: `http://192.168.1.30:5056` (Seerr) oppure la ricerca Jellyfin.
+8. Quando il film è importato e scansionato, appare nella libreria **Film** di Jellyfin.
 
 La pagina contiene solo: titolo, barra di ricerca, pulsante Cerca, risultati e pulsante Richiedi. Nessuna categoria, filtro, classifica o sezione download.
 
@@ -179,17 +180,40 @@ Tutti hanno `SHA256SUMS` verificato e DB con `PRAGMA integrity_check = ok`.
 
 Per un backup futuro completo usare `scripts/backup-configs.sh` (include anche Seerr). Non vengono mai copiati i media.
 
+## Storage / download
+
+Il disco root era pieno al **100%** perché qBittorrent salvava i download in `/home/dante/Downloads/temp` (disco di sistema). Questo causava anche scritture fallite di Jellyfin/plugin e la sparizione della UI.
+
+Correzione applicata:
+
+- qBittorrent `save_path` → `/mnt/media/downloads`;
+- categoria `radarr` (path relativo `movies`) → `/mnt/media/downloads/movies`;
+- torrent esistenti spostati con `setLocation` sul disco media;
+- liberati ~31 GB sul root (ora ~36 GB liberi).
+
+Verifica:
+
+```bash
+curl -s http://127.0.0.1:8080/api/v2/app/preferences |
+  python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["save_path"], d["temp_path_enabled"])'
+df -h / /mnt/media
+```
+
+I download futuri non riempiranno più `/`.
+
 ## Test eseguito
 
 Test end-to-end reale, poi ripulito:
 
 1. Aperta Jellyfin (URL pubblico `https://genossenfilm.ddns.net`): si apre su **Home**, la pagina richieste è nascosta.
 2. Cliccata la tab **Richiedi film**; verificata la UI minima (una barra, un pulsante).
-3. Cercato **Dune**; risultati con stato **Disponibile / Non disponibile**.
-4. Premuto **Richiedi** su **Dune - Parte tre** (TMDB `1170608`).
-5. Seerr: richiesta creata e auto-approvata (`status 2`).
-6. Radarr: film aggiunto con `qualityProfileId=8`, root `/mnt/media/movies`, `monitored=true`.
-7. Pulizia: richiesta Seerr e film Radarr eliminati; nessun torrent/file residuo.
+3. Verificato il riepilogo **Download in corso**: 5 elementi con stato, percentuale e barra (Chasing Ice 99.8%, Fantozzi 98.7%, LEGO 97.5%, The Lives of Others 39.7%, Dances with Wolves 14.5%).
+4. Cercato **Dune**; risultati con stato **Disponibile / Non disponibile**.
+5. Premuto **Richiedi** su **Dune - Parte tre** (TMDB `1170608`).
+6. Seerr: richiesta creata e auto-approvata (`status 2`).
+7. Radarr: film aggiunto con `qualityProfileId=8`, root `/mnt/media/movies`, `monitored=true`.
+8. Pulizia: richiesta Seerr e film Radarr eliminati; nessun torrent/file residuo.
+9. Tornato su **Home**, poi di nuovo su **Richiedi film**: barra di ricerca e risultati ancora presenti; cercato **Matrix** con successo.
 
 Verificato anche: click su Home nasconde la pagina richieste; reload non riapre la pagina richieste; ricerca e pulsante funzionano da URL pubblico.
 
@@ -208,7 +232,7 @@ Stato sincronizzazione Seerr: **506 media** (Film + Serie TV) dopo il full sync.
 
 - La API key Seerr e la API key Radarr **non** vengono mai inviate al browser: JE e Seerr Bridge le usano server-side.
 - Seerr: login locale disabilitato, solo login Jellyfin; `applicationUrl` solo LAN.
-- Utente Jellyfin `seerr`: admin nascosto, password casuale, usato da Seerr per il primo setup.
+- Utente Jellyfin `seerr`: creato **solo** perché il primo setup di Seerr richiede un account Jellyfin admin con password nota. È nascosto, la password è in `.env` ed è l’owner di Seerr. `dante` è già amministratore Seerr, quindi l’account `seerr` serve solo come owner di emergenza. Si può togliere l’admin Jellyfin (consigliato) ma non eliminare senza migrare l’owner di Seerr.
 - `5056` non è esposta a Internet; non aggiungere port forwarding.
 - UFW consente `5056/tcp` solo da LAN (`192.168.1.0/24`) e VPN (`10.224.29.0/24`).
 - I segreti stanno in `/home/dante/docker/seerr/.env` (600) e nei backup (640 root:media).
@@ -227,12 +251,13 @@ Stato sincronizzazione Seerr: **506 media** (Film + Serie TV) dopo il full sync.
 La UI live è **“Richiedi film”**, volutamente minimale:
 
 - una barra di ricerca + pulsante **Cerca**;
+- sotto la barra, un riepilogo **Download in corso** con poster, titolo, stato, percentuale e barra di avanzamento (fonte: coda Radarr via JE);
 - risultati film con poster, titolo, anno e stato;
 - un pulsante **Richiedi** per ogni film richiedibile;
 - messaggio di conferma “Richiesta inviata a Radarr”;
-- blocchi solidi (`#181818` pannello, `#202020` risultati) su sfondo `#0f0f0f`.
+- blocchi solidi (`#181818` pannello, `#202020` risultati, `#141414` download) su sfondo `#0f0f0f`.
 
-Non ci sono categorie, filtri, ordinamenti, classifiche, sezione download o iframe. La tab si apre solo al click; Jellyfin parte sempre da **Home**.
+Non ci sono categorie, filtri, ordinamenti, classifiche, iframe o sezione download separata. La tab si apre solo al click; Jellyfin parte sempre da **Home**.
 
 Le tab **Seerr Recommendations** e **Requests/Downloads** di Jellyfin Enhanced sono rimosse dalla navigazione.
 

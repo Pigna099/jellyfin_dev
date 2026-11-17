@@ -162,6 +162,61 @@ CUSTOM_TABS_HTML = r"""
   }
   .request-message.ok { color: #7ee2a8; }
   .request-message.error { color: #ff8f8f; }
+  .request-downloads { margin-top: .9rem; }
+  .request-downloads h2 {
+    margin: 0 0 .5rem;
+    color: #cfcfcf;
+    font-size: .98rem;
+    font-weight: 700;
+  }
+  .download-row {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    margin-bottom: .4rem;
+    padding: .55rem .65rem;
+    background: #141414;
+    border: 1px solid #2b2b2b;
+    border-radius: 8px;
+  }
+  .download-row img {
+    width: 36px;
+    height: 54px;
+    border-radius: 4px;
+    object-fit: cover;
+    background: #2a2a2a;
+    flex: 0 0 auto;
+  }
+  .download-info { flex: 1 1 auto; min-width: 0; }
+  .download-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: .9rem;
+    font-weight: 600;
+  }
+  .download-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: .5rem;
+    margin-top: .15rem;
+    color: #9a9a9a;
+    font-size: .8rem;
+  }
+  .download-bar {
+    height: 5px;
+    margin-top: .3rem;
+    overflow: hidden;
+    border-radius: 99px;
+    background: #2a2a2a;
+  }
+  .download-bar span {
+    display: block;
+    height: 100%;
+    border-radius: 99px;
+    background: #00a4dc;
+  }
+  .download-empty { color: #9a9a9a; font-size: .9rem; }
   .request-results {
     display: grid;
     gap: .7rem;
@@ -229,6 +284,7 @@ CUSTOM_TABS_HTML = r"""
       <button id="request-search" type="submit">Cerca</button>
     </form>
     <div class="request-message" id="request-message" role="status" aria-live="polite"></div>
+    <div class="request-downloads" id="request-downloads"></div>
     <div class="request-results" id="request-results"></div>
   </div>
 </div>
@@ -324,6 +380,53 @@ CUSTOM_TABS_HTML = r"""
     });
   }
 
+  var downloads = document.getElementById('request-downloads');
+
+  function queueStatus(status, progress) {
+    if (progress >= 100) return 'Completato';
+    if (status === 'downloading') return 'In download';
+    if (status === 'queued') return 'In coda';
+    if (status === 'warning') return 'In attesa';
+    if (status === 'completed') return 'Completato';
+    return status || 'In corso';
+  }
+
+  function loadDownloads() {
+    if (!downloads || !token()) return;
+    fetch('/JellyfinEnhanced/arr/queue', {
+      headers: authHeaders(),
+      cache: 'no-store'
+    }).then(function (response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    }).then(function (data) {
+      var items = (data.items || []).filter(function (item) {
+        return item && item.source === 'Radarr';
+      }).slice(0, 5);
+      if (!items.length) {
+        downloads.innerHTML = '<div class="download-empty">Nessun download in corso.</div>';
+        return;
+      }
+      var html = '<h2>Download in corso</h2>';
+      items.forEach(function (item) {
+        var progress = Math.max(0, Math.min(100, Number(item.progress) || 0));
+        var title = item.title || 'Film';
+        var year = item.subtitle ? ' (' + item.subtitle + ')' : '';
+        html += '<div class="download-row">' +
+          (item.posterUrl ? '<img src="' + esc(item.posterUrl) + '" alt="" loading="lazy">' : '') +
+          '<div class="download-info">' +
+            '<div class="download-title">' + esc(title + year) + '</div>' +
+            '<div class="download-meta"><span>' + esc(queueStatus(item.status, progress)) + '</span><span>' + progress.toFixed(1) + '%</span></div>' +
+            '<div class="download-bar"><span style="width:' + progress + '%"></span></div>' +
+          '</div>' +
+        '</div>';
+      });
+      downloads.innerHTML = html;
+    }).catch(function () {
+      downloads.innerHTML = '';
+    });
+  }
+
   function search(query) {
     if (!token()) {
       setMessage('Sessione non valida: ricarica Jellyfin e riprova.', 'error');
@@ -370,6 +473,7 @@ CUSTOM_TABS_HTML = r"""
       }
       button.textContent = 'Inviata';
       setMessage('Richiesta inviata a Radarr: ' + title + '.', 'ok');
+      loadDownloads();
     }).catch(function (error) {
       button.disabled = false;
       button.textContent = 'Riprova';
@@ -389,6 +493,8 @@ CUSTOM_TABS_HTML = r"""
   });
 
   input.focus();
+  loadDownloads();
+  setInterval(loadDownloads, 30000);
 })();
 </script>
 """

@@ -79,7 +79,7 @@ La tab è composta da:
 - **File Transformation** → prerequisito;
 - **Jellyseerr Bridge** → solo backend (search/request server-side); la sua pagina non viene usata.
 
-UI: una barra di ricerca, pulsante **Cerca**, risultati film e pulsante **Richiedi**. Nessuna categoria/filtro/download.
+UI: una barra di ricerca, pulsante **Cerca**, riepilogo **Download in corso** (progresso da `GET /JellyfinEnhanced/arr/queue`), risultati film e pulsante **Richiedi**. Nessuna categoria/filtro.
 
 Configurazione:
 
@@ -97,9 +97,41 @@ Per cambiare il contenuto della tab, modificare `CUSTOM_TABS_HTML` in `scripts/c
 Note:
 
 - la tab deve restare **nascosta su Home**: il content div `#customTab_0` deve avere le classi `tabContent pageTabContent`; lo script nella UI le aggiunge e forza Home al primo caricamento. Se la pagina richieste compare subito, fare hard reload o verificare che lo script sia presente nel `ContentHtml`;
+- se la barra di ricerca sparisce dopo aver cambiato pagina, controllare **prima** `df -h /`: un root pieno fa fallire la scrittura della config Custom Tabs/Jellyfin. Dopo aver liberato spazio, rilanciare `configure-request-ui.py` e fare hard reload;
 - se la tab non compare, verificare che i tre plugin siano **Active** e che la config Custom Tabs abbia un elemento `Title="Richiedi film"`;
 - la tab non compare sui client TV nativi (è web UI);
 - le richieste della pagina sono attribuite all'account Seerr `seerr`; la ricerca Jellyfin (JE) le attribuisce all'utente.
+
+## Storage download (qBittorrent)
+
+Il root era pieno perché qBittorrent salvava in `/home/dante/Downloads/temp`. Ora:
+
+```bash
+curl -s http://127.0.0.1:8080/api/v2/app/preferences |
+  python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["save_path"], d["temp_path_enabled"])'
+# atteso: /mnt/media/downloads False
+```
+
+Categoria `radarr`: path relativo `movies` → `/mnt/media/downloads/movies`.
+Per spostare torrent esistenti:
+
+```bash
+HASHES=$(curl -s 'http://127.0.0.1:8080/api/v2/torrents/info?category=radarr' |
+  python3 -c 'import sys,json;[print(t["hash"]) for t in json.load(sys.stdin) if t.get("save_path","").startswith("/home/dante")]')
+for H in $HASHES; do
+  curl -s -X POST -d "hashes=$H&location=/mnt/media/downloads/movies" \
+    http://127.0.0.1:8080/api/v2/torrents/setLocation
+done
+```
+
+Se `/` torna pieno: controllare `df -h /`, `du -sh /home/dante/Downloads/temp/*`, poi svuotare Docker build cache e journal:
+
+```bash
+docker builder prune -af
+docker image prune -af
+docker run --rm --privileged --pid=host --network=host alpine:3.20 \
+  nsenter -t 1 -m -u -i -n -p -- journalctl --vacuum-size=200M
+```
 
 ## Radarr
 
