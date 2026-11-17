@@ -1,0 +1,3274 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#101010">
+<meta name="description" content="Mockup della sezione Richiedi un film per Jellyfin: catalogo, ricerca, dettagli e richieste della famiglia.">
+<title>Richiedi un film · Jellyfin</title>
+<style>
+  /* =========================================================
+     Token di design — palette ispirata al tema scuro Jellyfin
+     ========================================================= */
+  :root {
+    --bg: #101010;
+    --surface: #181818;
+    --surface-2: #1b1b1b;
+    --card: #202020;
+    --card-hover: #262626;
+    --line: #2b2b2b;
+    --line-strong: #3a3a3a;
+    --text: #ffffff;
+    --muted: #aaaaaa;
+    --muted-2: #8b8b8b;
+    --accent: #00a4dc;
+    --accent-bright: #6fdcff;
+    --accent-ink: #04161d;
+    --success: #67d391;
+    --warning: #f0bd62;
+    --violet: #b6aaff;
+    --danger: #ff8d8d;
+    --radius: 14px;
+    --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --topbar-h: 60px;
+    --ease: cubic-bezier(.2, .75, .25, 1);
+  }
+
+  /* =========================================================
+     Reset e base
+     ========================================================= */
+  *, *::before, *::after { box-sizing: border-box; }
+  html {
+    color-scheme: dark;
+    scrollbar-gutter: stable;
+    -webkit-text-size-adjust: 100%;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text);
+    background:
+      radial-gradient(900px 500px at 86% -160px, rgba(0, 164, 220, .13), transparent 68%),
+      radial-gradient(760px 420px at -8% -40px, rgba(104, 83, 195, .08), transparent 64%),
+      var(--bg);
+    background-attachment: fixed;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body.modal-open { overflow: hidden; }
+  button, input, select { font: inherit; }
+  button { color: inherit; }
+  button, a, select { -webkit-tap-highlight-color: transparent; }
+  button { cursor: pointer; }
+  p, h1, h2, h3, h4, ul, ol, dl, dd, dt { margin: 0; }
+  ul, ol { padding: 0; list-style: none; }
+  svg { display: block; }
+  img { max-width: 100%; }
+  a { color: inherit; }
+  [hidden] { display: none !important; }
+
+  ::selection { background: rgba(0, 164, 220, .35); color: #fff; }
+  :focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
+  button:focus:not(:focus-visible), a:focus:not(:focus-visible) { outline: none; }
+
+  * { scrollbar-width: thin; scrollbar-color: #3a3a3a transparent; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: #383838; border-radius: 99px; border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-track { background: transparent; }
+
+  .icon {
+    width: 18px;
+    height: 18px;
+    flex: none;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .svg-sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+  .wrap {
+    width: 100%;
+    max-width: 1360px;
+    margin-inline: auto;
+    padding-inline: clamp(18px, 3.6vw, 44px);
+  }
+  .sr-only {
+    position: absolute !important;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0);
+    white-space: nowrap; border: 0;
+  }
+  .skip-link {
+    position: fixed;
+    left: 12px;
+    z-index: 200;
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-weight: 700;
+    text-decoration: none;
+    top: -80px;
+    transition: top .18s var(--ease);
+  }
+  .skip-link:focus { top: 10px; }
+
+  /* =========================================================
+     Barra superiore (contesto Jellyfin)
+     ========================================================= */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(16, 16, 16, .8);
+    border-bottom: 1px solid rgba(255, 255, 255, .07);
+    -webkit-backdrop-filter: blur(18px) saturate(150%);
+    backdrop-filter: blur(18px) saturate(150%);
+  }
+  .topbar__inner {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    height: var(--topbar-h);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 15.5px;
+    font-weight: 750;
+    letter-spacing: -.025em;
+    color: #fff;
+    flex: none;
+  }
+  .brand__mark {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    background: linear-gradient(150deg, #17b3e8, #00749e);
+    box-shadow: 0 4px 16px rgba(0, 164, 220, .28);
+  }
+  .brand__mark svg { width: 13px; height: 13px; fill: #fff; margin-left: 1px; }
+  .crumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 18px;
+    margin-left: 2px;
+    padding-left: 16px;
+    border-left: 1px solid #303030;
+    color: #8b8b8b;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  .crumbs [aria-current="page"] { color: #c8c8c8; }
+  .crumbs__sep { color: #555; }
+  .topbar__end {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-left: auto;
+  }
+  .server {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #8f8f8f;
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+  .server__dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: #5ccf8f;
+    box-shadow: 0 0 0 3px rgba(92, 207, 143, .12);
+  }
+  .user { display: inline-flex; align-items: center; gap: 8px; }
+  .avatar {
+    display: grid;
+    place-items: center;
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    border: 1px solid #3b4f59;
+    background: linear-gradient(145deg, #28414d, #1a2a33);
+    color: #c4efff;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .user__name { color: #cfcfcf; font-size: 12.5px; }
+
+  /* =========================================================
+     Hero e riepilogo
+     ========================================================= */
+  .hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(310px, 380px);
+    gap: clamp(28px, 5vw, 72px);
+    align-items: end;
+    padding-block: clamp(34px, 5vw, 58px) clamp(28px, 4vw, 42px);
+  }
+  .hero__copy { max-width: 760px; }
+  .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #a1a1a1;
+    font-size: 10.5px;
+    font-weight: 650;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+  .eyebrow__dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 4px rgba(0, 164, 220, .12), 0 0 14px rgba(0, 164, 220, .55);
+    flex: none;
+  }
+  .eyebrow__muted { color: #666; letter-spacing: .04em; text-transform: none; font-weight: 500; }
+  .hero h1 {
+    margin-top: 15px;
+    font-size: clamp(2.25rem, 4.4vw, 3.45rem);
+    line-height: 1.03;
+    font-weight: 800;
+    letter-spacing: -.045em;
+    text-wrap: balance;
+  }
+  .hero__lede {
+    max-width: 58ch;
+    margin-top: 14px;
+    color: #ababab;
+    font-size: 15.5px;
+    line-height: 1.68;
+  }
+  .hero__aside {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: stretch;
+  }
+  .stat {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-height: 168px;
+    padding: 16px;
+    overflow: hidden;
+    border: 1px solid #2a2a2a;
+    border-radius: 16px;
+    background: linear-gradient(155deg, #1e1e1e, #161616 78%);
+    color: var(--text);
+    text-decoration: none;
+    transition: border-color .2s var(--ease), transform .2s var(--ease), background .2s var(--ease);
+  }
+  .stat::after {
+    content: "";
+    position: absolute;
+    top: -46px; right: -34px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0, 164, 220, .16), transparent 68%);
+    pointer-events: none;
+  }
+  a.stat:hover {
+    border-color: rgba(0, 164, 220, .42);
+    background: linear-gradient(155deg, #212121, #171717 78%);
+    transform: translateY(-2px);
+  }
+  .stat__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: 30px;
+  }
+  .stat__icon {
+    display: grid;
+    place-items: center;
+    width: 30px; height: 30px;
+    border-radius: 9px;
+    color: var(--accent-bright);
+    background: rgba(0, 164, 220, .11);
+    border: 1px solid rgba(0, 164, 220, .15);
+  }
+  .stat__icon .icon { width: 15px; height: 15px; }
+  .stat__live {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #a6e0b6;
+    font-size: 9.5px;
+    font-weight: 650;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  .live-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 3px rgba(103, 211, 145, .1);
+    animation: live-pulse 2.4s ease-out infinite;
+  }
+  .stat__tag {
+    color: #8d8d8d;
+    font-size: 9.5px;
+    font-weight: 650;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+  }
+  .stat__main {
+    display: flex;
+    align-items: flex-end;
+    gap: 9px;
+    margin-top: 17px;
+  }
+  .stat__main strong {
+    font-size: 38px;
+    line-height: .9;
+    font-weight: 800;
+    letter-spacing: -.055em;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat__main span {
+    color: #999;
+    font-size: 11.5px;
+    line-height: 1.3;
+    padding-bottom: 1px;
+  }
+  .stat__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 11px;
+    border-top: 1px solid #292929;
+    color: #979797;
+    font-size: 9.5px;
+    line-height: 1.35;
+  }
+  .stat__foot .icon { width: 12px; height: 12px; color: #666; transition: color .18s, transform .18s; }
+  a.stat:hover .stat__foot .icon { color: var(--accent-bright); transform: translateY(2px); }
+
+  /* =========================================================
+     Ricerca + filtri (barra sticky)
+     ========================================================= */
+  .toolbar-band {
+    position: sticky;
+    top: var(--topbar-h);
+    z-index: 30;
+    background: linear-gradient(180deg, rgba(16, 16, 16, .975), rgba(16, 16, 16, .91));
+    border-block: 1px solid rgba(255, 255, 255, .065);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .16);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    backdrop-filter: blur(20px) saturate(140%);
+  }
+  .toolbar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-block: 15px 13px;
+  }
+  .search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 56px;
+    padding: 0 10px 0 16px;
+    border: 1px solid #2d2d2d;
+    border-radius: 13px;
+    background: #1b1b1b;
+    transition: border-color .18s var(--ease), box-shadow .18s var(--ease), background .18s var(--ease);
+  }
+  .search:focus-within {
+    border-color: rgba(0, 164, 220, .72);
+    background: #1e1e1e;
+    box-shadow: 0 0 0 3px rgba(0, 164, 220, .13);
+  }
+  .search.is-busy { border-color: rgba(0, 164, 220, .42); }
+  .search__icon { color: #858585; transition: color .18s; }
+  .search:focus-within .search__icon { color: var(--accent); }
+  .search input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: #fff;
+    font-size: 16px;
+    letter-spacing: -.005em;
+  }
+  .search input::placeholder { color: #8b8b8b; opacity: 1; }
+  .search input::-webkit-search-cancel-button { display: none; }
+  .search input:focus-visible { outline: none; }
+  .search__kbd {
+    display: inline-grid;
+    place-items: center;
+    width: 26px;
+    height: 24px;
+    margin-right: 4px;
+    border: 1px solid #383838;
+    border-radius: 5px;
+    background: #242424;
+    color: #909090;
+    font-family: var(--font);
+    font-size: 11px;
+    line-height: 1;
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, .2);
+  }
+  .search.has-value .search__kbd, .search.is-busy .search__kbd { display: none; }
+  .search__spinner { display: grid; place-items: center; width: 22px; flex: none; }
+  .search__clear {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #999;
+    transition: background .15s, color .15s;
+  }
+  .search__clear:hover { background: #2a2a2a; color: #fff; }
+  .search__clear .icon { width: 15px; height: 15px; }
+
+  .toolbar__row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .filters { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 13px;
+    border: 1px solid #2e2e2e;
+    border-radius: 999px;
+    background: #1a1a1a;
+    color: #b3b3b3;
+    font-size: 12.5px;
+    font-weight: 550;
+    line-height: 1;
+    white-space: nowrap;
+    transition: border-color .18s, background .18s, color .18s;
+  }
+  .chip:hover { border-color: #464646; color: #fff; }
+  .chip[aria-pressed="true"] {
+    border-color: rgba(0, 164, 220, .52);
+    background: rgba(0, 164, 220, .12);
+    color: #e3f9ff;
+  }
+  .chip__count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 21px;
+    height: 19px;
+    padding: 0 6px;
+    border-radius: 6px;
+    background: #262626;
+    color: #999;
+    font-size: 10.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip[aria-pressed="true"] .chip__count { background: rgba(0, 164, 220, .2); color: #bdefff; }
+  .sort {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-left: auto;
+    color: #8f8f8f;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .sort > label { cursor: pointer; }
+  .select-wrap { position: relative; display: inline-flex; align-items: center; }
+  .select-wrap select {
+    appearance: none;
+    -webkit-appearance: none;
+    height: 36px;
+    padding: 0 34px 0 11px;
+    border: 1px solid #303030;
+    border-radius: 9px;
+    outline: 0;
+    background: #1a1a1a;
+    color: #d8d8d8;
+    font-size: 12.5px;
+    cursor: pointer;
+    transition: border-color .18s, background .18s;
+  }
+  .select-wrap select:hover { border-color: #474747; background: #1e1e1e; }
+  .select-wrap select:focus-visible { border-color: rgba(0, 164, 220, .7); box-shadow: 0 0 0 3px rgba(0, 164, 220, .12); outline: none; }
+  .select-wrap__chevron {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    color: #8a8a8a;
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  /* =========================================================
+     Risultati + griglia film
+     ========================================================= */
+  .results-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 18px;
+    margin: 22px 0 15px;
+  }
+  .results-line__count { color: #9a9a9a; font-size: 12.5px; letter-spacing: .01em; }
+  .results-line__count strong { color: #fff; font-size: 13px; font-weight: 700; }
+  .results-line__hint { color: #8a8a8a; font-size: 11.5px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+    gap: 18px;
+    align-items: stretch;
+  }
+  .card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 9px;
+    border: 1px solid #2b2b2b;
+    border-radius: var(--radius);
+    background: var(--card);
+    transition: transform .22s var(--ease), border-color .22s var(--ease), box-shadow .22s var(--ease);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .card:hover {
+      transform: translateY(-3px);
+      border-color: #3b3b3b;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, .38);
+    }
+  }
+  .card.is-success {
+    border-color: rgba(103, 211, 145, .48);
+    box-shadow: 0 0 0 1px rgba(103, 211, 145, .12), 0 12px 34px rgba(103, 211, 145, .07);
+  }
+  .card__media { position: relative; isolation: isolate; border-radius: 9px; }
+  .card__media::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    z-index: 1;
+    height: 44%;
+    border-radius: 0 0 9px 9px;
+    background: linear-gradient(180deg, transparent, rgba(0, 0, 0, .48));
+    pointer-events: none;
+  }
+  .card__poster {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+  }
+  .card__poster .poster { width: 100%; }
+  .poster {
+    position: relative;
+    display: block;
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: 9px;
+    isolation: isolate;
+    container-type: inline-size;
+    background:
+      radial-gradient(105% 78% at 76% 8%, var(--c3) 0%, transparent 58%),
+      linear-gradient(158deg, var(--c1) 0%, var(--c2) 100%);
+    transition: transform .45s var(--ease);
+  }
+  .poster::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, .09) 0%, transparent 27%, transparent 62%, rgba(0, 0, 0, .38) 100%);
+    pointer-events: none;
+  }
+  .poster::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: repeating-linear-gradient(115deg, transparent 0 17px, rgba(255, 255, 255, .025) 17px 18px);
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
+  .poster__shape { position: absolute; z-index: 0; pointer-events: none; }
+  .poster--v1 .poster__shape {
+    top: 16%;
+    left: 14%;
+    width: 72cqw;
+    aspect-ratio: 1;
+    border: 1px solid rgba(255, 255, 255, .30);
+    border-radius: 50%;
+    box-shadow: 0 0 0 12px rgba(255, 255, 255, .025), inset 0 0 60px rgba(255, 255, 255, .05);
+  }
+  .poster--v2 .poster__shape {
+    top: 30%;
+    left: 7%;
+    width: 88cqw;
+    height: 45cqw;
+    border: 1px solid rgba(255, 255, 255, .27);
+    border-radius: 50%;
+    background: linear-gradient(120deg, rgba(255, 255, 255, .08), transparent 62%);
+    transform: rotate(-27deg);
+  }
+  .poster--v3 .poster__shape {
+    top: 18%;
+    left: -37%;
+    width: 116cqw;
+    aspect-ratio: 1;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 50%;
+    background: repeating-radial-gradient(circle, transparent 0 17px, rgba(255, 255, 255, .10) 17px 18px);
+  }
+  .poster__frame {
+    position: absolute;
+    inset: 8px;
+    z-index: 2;
+    border: 1px solid rgba(255, 255, 255, .16);
+    border-radius: 6px;
+    pointer-events: none;
+  }
+  .poster__mark {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    padding-bottom: 2%;
+    color: rgba(255, 255, 255, .07);
+    -webkit-text-stroke: 1px rgba(255, 255, 255, .42);
+    font-size: clamp(2.2rem, 26cqw, 4.25rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -.09em;
+    text-shadow: 0 16px 38px rgba(0, 0, 0, .28);
+    user-select: none;
+  }
+  .card__poster:hover .poster,
+  .card__poster:focus-visible .poster { transform: scale(1.026); }
+  .card__peek {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 9px;
+    background: rgba(4, 4, 4, .32);
+    opacity: 0;
+    transition: opacity .18s var(--ease);
+  }
+  .card__peek-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, .18);
+    border-radius: 999px;
+    background: rgba(15, 15, 15, .82);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+    color: #fff;
+    font-size: 11.5px;
+    font-weight: 650;
+    transform: translateY(5px);
+    transition: transform .18s var(--ease);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .card__peek-pill .icon { width: 14px; height: 14px; }
+  .card__poster:hover .card__peek,
+  .card__poster:focus-visible .card__peek { opacity: 1; }
+  .card__poster:hover .card__peek-pill,
+  .card__poster:focus-visible .card__peek-pill { transform: none; }
+  @media (hover: none) { .card__peek { display: none; } }
+  .badge {
+    position: absolute;
+    top: 9px;
+    left: 9px;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: calc(100% - 18px);
+    padding: 4px 8px;
+    overflow: hidden;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, .18);
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: .015em;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  .badge__dot {
+    width: 5px;
+    height: 5px;
+    flex: none;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 6px currentColor;
+  }
+  .badge--requestable { border-color: rgba(0, 164, 220, .38); background: rgba(4, 28, 38, .82); color: #8fe3ff; }
+  .badge--available { border-color: rgba(103, 211, 145, .32); background: rgba(12, 36, 23, .82); color: #9be7ba; }
+  .badge--requested { border-color: rgba(240, 189, 98, .34); background: rgba(36, 28, 12, .84); color: #f6d28f; }
+  .badge--downloading { border-color: rgba(182, 170, 255, .36); background: rgba(28, 23, 51, .84); color: #c9c0ff; }
+  .badge--unavailable { border-color: rgba(255, 255, 255, .14); background: rgba(18, 18, 18, .84); color: #c9c9c9; }
+  .badge--downloading .badge__dot { animation: live-pulse 2s ease-out infinite; }
+  .rating {
+    position: absolute;
+    left: 9px;
+    bottom: 9px;
+    z-index: 4;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 7px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 6px;
+    background: rgba(8, 8, 8, .78);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  .rating .icon { width: 11px; height: 11px; color: #f5c518; }
+  .card__body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    padding: 11px 3px 2px;
+  }
+  .card__title {
+    min-height: calc(2 * 1.35em);
+    color: #f2f2f2;
+    font-size: 13.5px;
+    font-weight: 650;
+    line-height: 1.35;
+    letter-spacing: -.012em;
+  }
+  .card__title-btn {
+    display: -webkit-box;
+    overflow: hidden;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    text-align: left;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    transition: color .15s;
+  }
+  .card__title-btn:hover { color: #8fe3ff; }
+  .card__meta {
+    margin: 5px 0 10px;
+    overflow: hidden;
+    color: #929292;
+    font-size: 11.5px;
+    line-height: 1.4;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+  }
+  .card__action { display: flex; gap: 8px; margin-top: auto; padding-top: 3px; }
+
+  /* =========================================================
+     Bottoni
+     ========================================================= */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 40px;
+    padding: 0 16px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background .18s var(--ease), border-color .18s var(--ease), color .18s var(--ease), transform .12s var(--ease);
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { cursor: not-allowed; }
+  .btn .icon { width: 15px; height: 15px; }
+  .btn--primary { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+  .btn--primary:hover:not(:disabled) { border-color: #36c4f2; background: #36c4f2; }
+  .btn--primary:focus-visible { outline-color: #bcefff; }
+  .btn--ghost { border-color: #343434; background: transparent; color: #cfcfcf; }
+  .btn--ghost:hover:not(:disabled) { border-color: #4a4a4a; background: #242424; color: #fff; }
+  .btn--soft { border-color: #343434; background: #262626; color: #d0d0d0; }
+  .btn--soft:hover:not(:disabled) { background: #2e2e2e; }
+  .btn--small { height: 36px; padding: 0 12px; border-radius: 9px; font-size: 12px; }
+  .btn--card {
+    width: 100%;
+    height: 38px;
+    padding: 0 9px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: -.005em;
+  }
+  .btn--card .icon { width: 14px; height: 14px; }
+  .btn--request { border-color: rgba(0, 164, 220, .34); background: rgba(0, 164, 220, .11); color: #a3e8ff; }
+  .btn--request:hover:not(:disabled) { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+  .btn--retry { border-color: rgba(255, 141, 141, .35); background: rgba(255, 141, 141, .1); color: #ffb8b8; }
+  .btn--retry:hover:not(:disabled) { border-color: rgba(255, 141, 141, .6); background: rgba(255, 141, 141, .16); color: #ffd5d5; }
+  .btn--success { border-color: rgba(103, 211, 145, .28); background: rgba(103, 211, 145, .1); color: #9be7ba; }
+  .btn--download { border-color: rgba(182, 170, 255, .24); background: rgba(182, 170, 255, .09); color: #c9c0ff; }
+  .btn--neutral { border-color: #333; background: #252525; color: #c9c9c9; }
+  .btn--neutral:hover:not(:disabled) { border-color: #484848; background: #2b2b2b; }
+  .btn--danger { border-color: var(--danger); background: var(--danger); color: #1c0808; }
+
+  .spinner {
+    display: inline-block;
+    width: 15px;
+    height: 15px;
+    flex: none;
+    border: 2px solid rgba(0, 164, 220, .22);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+  }
+  .spinner--small { width: 13px; height: 13px; border-width: 1.8px; }
+  .btn--primary .spinner { border-color: rgba(4, 22, 29, .25); border-top-color: var(--accent-ink); }
+
+  /* =========================================================
+     Stato vuoto
+     ========================================================= */
+  .empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 70px 24px;
+    border: 1px dashed #323232;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #171717, #141414);
+    text-align: center;
+  }
+  .empty__art {
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 18px;
+    border: 1px solid rgba(0, 164, 220, .2);
+    border-radius: 18px;
+    background: rgba(0, 164, 220, .08);
+    color: #72d4f2;
+  }
+  .empty__art .icon { width: 27px; height: 27px; }
+  .empty h3 { font-size: 19px; font-weight: 750; letter-spacing: -.02em; }
+  .empty p { max-width: 48ch; margin-top: 8px; color: #9c9c9c; font-size: 13px; line-height: 1.6; }
+  .empty .btn { margin-top: 20px; }
+
+  /* =========================================================
+     Scheletri di caricamento
+     ========================================================= */
+  .skeleton-card {
+    padding: 9px;
+    border: 1px solid #262626;
+    border-radius: var(--radius);
+    background: #1c1c1c;
+  }
+  .sk {
+    position: relative;
+    overflow: hidden;
+    border-radius: 6px;
+    background: #262626;
+  }
+  .sk::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 18%, rgba(255, 255, 255, .055) 38%, transparent 60%);
+    transform: translateX(-110%);
+    animation: shimmer 1.35s linear infinite;
+  }
+  .sk--poster { width: 100%; aspect-ratio: 2 / 3; border-radius: 9px; }
+  .sk--title { width: 82%; height: 13px; margin-top: 14px; }
+  .sk--meta { width: 55%; height: 10px; margin-top: 9px; }
+  .sk--btn { width: 100%; height: 38px; margin-top: 16px; border-radius: 8px; }
+
+  /* =========================================================
+     Le mie richieste
+     ========================================================= */
+  .requests {
+    margin-top: 54px;
+    padding: clamp(18px, 3vw, 28px);
+    border: 1px solid #292929;
+    border-radius: 18px;
+    background:
+      radial-gradient(600px 280px at 94% 0%, rgba(0, 164, 220, .07), transparent 65%),
+      linear-gradient(180deg, #191919, #151515);
+    scroll-margin-top: calc(var(--topbar-h) + 100px);
+  }
+  .requests__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+  .requests__intro { display: flex; align-items: flex-start; gap: 13px; min-width: 0; }
+  .section-icon {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    flex: none;
+    border: 1px solid rgba(0, 164, 220, .18);
+    border-radius: 11px;
+    background: rgba(0, 164, 220, .09);
+    color: #78d7f4;
+  }
+  .section-icon .icon { width: 18px; height: 18px; }
+  .eyebrow--small { font-size: 9.5px; letter-spacing: .14em; color: #8c8c8c; }
+  .requests__titleline { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-top: 5px; }
+  .requests__titleline h2 { font-size: 21px; font-weight: 750; letter-spacing: -.03em; line-height: 1.15; }
+  .requests__titleline h2:focus-visible { outline-offset: 4px; }
+  .requests__sub { margin-top: 5px; color: #949494; font-size: 12px; line-height: 1.5; }
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    height: 21px;
+    padding: 0 8px;
+    border: 1px solid rgba(0, 164, 220, .25);
+    border-radius: 999px;
+    background: rgba(0, 164, 220, .11);
+    color: #9be6fc;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .02em;
+    white-space: nowrap;
+  }
+  .pill.is-done { border-color: rgba(103, 211, 145, .28); background: rgba(103, 211, 145, .1); color: #a7e8c0; }
+  .requests__head .btn { flex: none; margin-top: 4px; }
+  .requests__head .btn.is-loading .icon { animation: spin .8s linear infinite; }
+  .requests__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .request {
+    display: flex;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid #2b2b2b;
+    border-radius: 12px;
+    background: #202020;
+    transition: border-color .18s var(--ease), background .18s var(--ease);
+  }
+  .request:hover { border-color: #3b3b3b; background: #222; }
+  .request__thumb {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 46px;
+    flex: none;
+    align-self: flex-start;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 6px;
+    background:
+      radial-gradient(100% 70% at 76% 10%, var(--c3), transparent 60%),
+      linear-gradient(155deg, var(--c1), var(--c2));
+    color: rgba(255, 255, 255, .74);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: -.06em;
+    text-shadow: 0 1px 6px rgba(0, 0, 0, .35);
+  }
+  .request__thumb::after {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 3px;
+  }
+  .request__body { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+  .request__top { display: flex; align-items: flex-start; gap: 8px; }
+  .request__title {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #f0f0f0;
+    font-size: 13px;
+    font-weight: 650;
+    line-height: 1.3;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color .15s;
+  }
+  .request__title:hover { color: #8fe3ff; }
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex: none;
+    height: 19px;
+    margin-left: auto;
+    padding: 0 7px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    font-size: 9.5px;
+    font-weight: 650;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .status-chip .badge__dot { width: 4px; height: 4px; }
+  .status-chip--queued { border-color: rgba(240, 189, 98, .28); background: rgba(240, 189, 98, .08); color: #f2cf92; }
+  .status-chip--downloading { border-color: rgba(0, 164, 220, .28); background: rgba(0, 164, 220, .08); color: #93e2fb; }
+  .status-chip--ready { border-color: rgba(103, 211, 145, .28); background: rgba(103, 211, 145, .08); color: #a4e8bd; }
+  .request__meta {
+    margin-top: 3px;
+    overflow: hidden;
+    color: #969696;
+    font-size: 10.5px;
+    line-height: 1.4;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+  }
+  .progress {
+    height: 4px;
+    margin-top: 11px;
+    overflow: hidden;
+    border-radius: 99px;
+    background: #313131;
+  }
+  .progress__bar {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #007fa8, #27c1ec);
+    transition: width .55s var(--ease);
+  }
+  .progress__bar--queued { background: linear-gradient(90deg, #8f6d2e, #f0bd62); }
+  .progress__bar--downloading {
+    background:
+      repeating-linear-gradient(135deg, rgba(255, 255, 255, .13) 0 6px, transparent 6px 12px),
+      linear-gradient(90deg, #007fa8, #27c1ec);
+    background-size: 24px 100%, 100% 100%;
+    animation: progress-stripes 1.1s linear infinite;
+  }
+  .progress__bar--ready { background: linear-gradient(90deg, #3a9c61, #67d391); }
+  .request__foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 6px;
+    color: #969696;
+    font-size: 9.5px;
+    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+  }
+  .request__foot span:last-child { color: #a5a5a5; text-align: right; }
+  .requests__empty {
+    grid-column: 1 / -1;
+    padding: 26px;
+    border: 1px dashed #353535;
+    border-radius: 12px;
+    color: #9b9b9b;
+    font-size: 12.5px;
+    text-align: center;
+  }
+
+  /* =========================================================
+     Footer
+     ========================================================= */
+  .foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 46px;
+    padding: 20px 0 40px;
+    border-top: 1px solid #242424;
+    color: #8f8f8f;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .foot p { display: inline-flex; align-items: center; gap: 7px; }
+  .foot__dot { width: 5px; height: 5px; border-radius: 50%; background: #555; }
+
+  /* =========================================================
+     Dialog dettaglio film
+     ========================================================= */
+  .movie-dialog {
+    width: min(940px, calc(100vw - 40px));
+    max-width: 940px;
+    max-height: calc(100vh - 40px);
+    padding: 0;
+    overflow: visible;
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+    color: var(--text);
+  }
+  .movie-dialog::backdrop {
+    background: rgba(4, 4, 5, .76);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+  .dialog__panel {
+    position: relative;
+    display: grid;
+    grid-template-columns: 292px minmax(0, 1fr);
+    max-height: calc(100vh - 40px);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 18px;
+    background: var(--surface-2);
+    box-shadow: 0 36px 110px rgba(0, 0, 0, .68);
+    animation: dialog-in .3s var(--ease);
+  }
+  .dialog__panel:focus { outline: none; }
+  .dialog__close {
+    position: absolute;
+    top: 13px;
+    right: 13px;
+    z-index: 6;
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-radius: 50%;
+    background: rgba(18, 18, 18, .66);
+    color: #e1e1e1;
+    transition: background .18s, color .18s, border-color .18s;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .dialog__close:hover { border-color: rgba(255, 255, 255, .28); background: #2a2a2a; color: #fff; }
+  .dialog__close:disabled { cursor: wait; opacity: .5; }
+  .dialog__close .icon { width: 16px; height: 16px; }
+  .dialog__media {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    overflow: hidden;
+    background:
+      radial-gradient(90% 70% at 72% 10%, var(--c3), transparent 68%),
+      linear-gradient(165deg, var(--c1), var(--c2));
+  }
+  .dialog__media::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(82% 58% at 50% 43%, transparent 18%, rgba(0, 0, 0, .5) 100%),
+      repeating-linear-gradient(115deg, transparent 0 24px, rgba(255, 255, 255, .022) 24px 25px),
+      linear-gradient(180deg, rgba(0, 0, 0, .06), rgba(0, 0, 0, .5));
+    pointer-events: none;
+  }
+  .dialog__media::after {
+    content: "";
+    position: absolute;
+    bottom: -70px;
+    left: -30px;
+    width: 220px;
+    height: 220px;
+    border: 1px solid rgba(255, 255, 255, .15);
+    border-radius: 50%;
+    box-shadow: 0 0 0 36px rgba(255, 255, 255, .02);
+    pointer-events: none;
+  }
+  .dialog__poster-block {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 236px;
+  }
+  .dialog__poster {
+    position: relative;
+    width: 100%;
+    border-radius: 10px;
+    box-shadow: 0 26px 56px rgba(0, 0, 0, .52);
+  }
+  .dialog__poster .poster {
+    border: 1px solid rgba(255, 255, 255, .17);
+    border-radius: 10px;
+  }
+  .dialog__poster .poster__frame { inset: 9px; border-radius: 6px; }
+  .dialog__poster-caption {
+    color: rgba(255, 255, 255, .65);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    line-height: 1.4;
+    text-align: center;
+    text-transform: uppercase;
+  }
+  .dialog__content {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    max-height: calc(100vh - 40px);
+    background: #1b1b1b;
+  }
+  .dialog__scroll {
+    overflow-y: auto;
+    padding: 30px 32px 22px;
+    overscroll-behavior: contain;
+  }
+  .dialog__intro { display: flex; align-items: flex-start; gap: 14px; padding-right: 34px; }
+  .dialog__thumb {
+    display: none;
+    width: 72px;
+    flex: none;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 8px;
+    background:
+      radial-gradient(100% 70% at 76% 10%, var(--c3), transparent 60%),
+      linear-gradient(155deg, var(--c1), var(--c2));
+    color: rgba(255, 255, 255, .7);
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -.07em;
+    text-shadow: 0 2px 9px rgba(0, 0, 0, .35);
+    place-items: center;
+  }
+  .dialog__eyebrow {
+    color: #8d8d8d;
+    font-size: 9.5px;
+    font-weight: 650;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+  }
+  .dialog__title {
+    margin-top: 7px;
+    font-size: clamp(24px, 3vw, 34px);
+    font-weight: 800;
+    line-height: 1.08;
+    letter-spacing: -.04em;
+    text-wrap: balance;
+  }
+  .dialog__meta { margin-top: 9px; color: #a2a2a2; font-size: 12.5px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  .dialog__statusrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 18px 0 2px; }
+  .dialog__statusrow .badge { position: static; max-width: none; }
+  .dialog__rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #f5c518;
+    font-size: 12px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .dialog__rating .icon { width: 12px; height: 12px; }
+  .dialog__rating small { color: #858585; font-size: 9px; font-weight: 500; }
+  .dialog__cert {
+    padding: 2px 6px;
+    border: 1px solid #3a3a3a;
+    border-radius: 4px;
+    color: #b5b5b5;
+    font-size: 9px;
+    font-weight: 650;
+    letter-spacing: .02em;
+  }
+  .dialog__plot {
+    margin-top: 17px;
+    color: #c6c6c6;
+    font-size: 13.5px;
+    line-height: 1.72;
+  }
+  .genre-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 17px; }
+  .genre {
+    padding: 4px 9px;
+    border: 1px solid #343434;
+    border-radius: 999px;
+    background: #212121;
+    color: #b1b1b1;
+    font-size: 10px;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .dialog__label {
+    margin-top: 24px;
+    margin-bottom: 9px;
+    color: #999;
+    font-size: 9.5px;
+    font-weight: 650;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+  }
+  .spec-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .spec {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #2b2b2b;
+    border-radius: 9px;
+    background: #202020;
+  }
+  .spec dt, .spec__k {
+    color: #9a9a9a;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+  .spec dd, .spec__v {
+    overflow: hidden;
+    color: #dedede;
+    font-size: 12px;
+    font-weight: 550;
+    line-height: 1.4;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .profile-box {
+    margin-top: 9px;
+    padding: 12px;
+    border: 1px solid #2b2b2b;
+    border-radius: 10px;
+    background: #1f1f1f;
+  }
+  .profile-box .select-wrap { display: flex; width: 100%; }
+  .profile-box select {
+    width: 100%;
+    height: 40px;
+    padding-inline: 12px 34px;
+    border-color: #383838;
+    background: #252525;
+    color: #eee;
+    font-size: 12.5px;
+  }
+  .profile-box select:disabled { cursor: not-allowed; color: #929292; background: #222; }
+  .profile-box__hint { margin: 8px 1px 0; color: #9b9b9b; font-size: 10.5px; line-height: 1.5; }
+  .dialog__footer {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-top: auto;
+    padding: 15px 24px calc(15px + env(safe-area-inset-bottom));
+    border-top: 1px solid #2c2c2c;
+    background: #181818;
+  }
+  .dialog__footer-copy { flex: 1; min-width: 0; }
+  .dialog__action { display: flex; flex: none; }
+  .dialog__hint { color: #959595; font-size: 10.5px; line-height: 1.5; }
+  .dialog__error {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    color: #ffadad;
+    font-size: 10.5px;
+    line-height: 1.5;
+  }
+  .dialog__error .icon { width: 14px; height: 14px; margin-top: 1px; }
+  .dialog__confirm { flex: none; min-width: 190px; }
+  .dialog__confirm.btn--soft, .dialog__confirm.btn--success, .dialog__confirm.btn--download { border-width: 1px; }
+  .dialog__footer .btn--primary { height: 44px; border-radius: 10px; font-size: 13.5px; }
+
+  /* =========================================================
+     Toast
+     ========================================================= */
+  .toasts {
+    position: fixed;
+    right: max(18px, env(safe-area-inset-right));
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    width: min(378px, calc(100vw - 36px));
+    pointer-events: none;
+  }
+  .toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    padding: 13px;
+    border: 1px solid #383838;
+    border-radius: 12px;
+    background: rgba(32, 32, 32, .98);
+    box-shadow: 0 20px 52px rgba(0, 0, 0, .58);
+    pointer-events: auto;
+    animation: toast-in .32s var(--ease);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+  }
+  .toast.is-leaving { animation: toast-out .2s ease forwards; }
+  .toast__icon {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: 8px;
+  }
+  .toast__icon .icon { width: 16px; height: 16px; }
+  .toast--success .toast__icon { background: rgba(103, 211, 145, .12); color: #9be7ba; }
+  .toast--error .toast__icon { background: rgba(255, 141, 141, .12); color: #ffadad; }
+  .toast--info .toast__icon { background: rgba(0, 164, 220, .12); color: #8fe3ff; }
+  .toast__body { flex: 1; min-width: 0; padding-top: 1px; }
+  .toast__title { color: #f2f2f2; font-size: 12.5px; font-weight: 700; line-height: 1.35; }
+  .toast__message { margin-top: 3px; color: #a8a8a8; font-size: 11.5px; line-height: 1.5; }
+  .toast__action {
+    margin-top: 7px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #8fe3ff;
+    font-size: 11.5px;
+    font-weight: 650;
+    line-height: 1.3;
+    text-align: left;
+  }
+  .toast__action:hover { color: #c8f4ff; text-decoration: underline; text-underline-offset: 2px; }
+  .toast__close {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    flex: none;
+    margin: -2px -2px 0 0;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #8c8c8c;
+    transition: background .15s, color .15s;
+  }
+  .toast__close:hover { background: #333; color: #fff; }
+  .toast__close .icon { width: 13px; height: 13px; }
+
+  /* =========================================================
+     Animazioni
+     ========================================================= */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes shimmer { to { transform: translateX(110%); } }
+  @keyframes live-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(103, 211, 145, .2); }
+    65% { box-shadow: 0 0 0 5px rgba(103, 211, 145, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(103, 211, 145, 0); }
+  }
+  @keyframes progress-stripes { to { background-position: 24px 0, 0 0; } }
+  @keyframes dialog-in {
+    from { opacity: 0; transform: translateY(12px) scale(.985); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(10px) scale(.985); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes toast-out {
+    to { opacity: 0; transform: translateY(6px) scale(.99); }
+  }
+
+  /* =========================================================
+     Responsive
+     ========================================================= */
+  @media (max-width: 980px) {
+    .hero { grid-template-columns: 1fr; align-items: start; gap: 28px; }
+    .hero__aside { max-width: 430px; }
+  }
+  @media (max-width: 760px) {
+    :root { --topbar-h: 56px; }
+    .topbar__inner { gap: 10px; }
+    .crumbs { display: none; }
+    .server { display: none; }
+    .user__name { display: none; }
+    .topbar__end { gap: 8px; }
+    .toolbar-band {
+      position: static;
+      border-top: 0;
+      box-shadow: none;
+    }
+    .toolbar { gap: 10px; padding-block: 13px 11px; }
+    .toolbar__row { gap: 10px; }
+    .sort { width: 100%; justify-content: flex-end; margin-left: 0; font-size: 11.5px; }
+    .sort > label { display: inline; }
+    .movie-dialog {
+      width: 100%;
+      max-width: 100%;
+      height: 100%;
+      max-height: 100%;
+      margin: 0;
+      border-radius: 0;
+    }
+    .dialog__close {
+      width: 42px;
+      height: 42px;
+      top: 12px;
+      right: 12px;
+    }
+    .dialog__panel {
+      grid-template-columns: 1fr;
+      height: 100%;
+      max-height: 100%;
+      border: 0;
+      border-radius: 0;
+    }
+    .dialog__media { display: none; }
+    .dialog__content { max-height: 100dvh; height: 100dvh; }
+    .dialog__scroll { padding: 20px 18px 12px; }
+    .dialog__intro { padding-right: 50px; gap: 12px; }
+    .dialog__thumb { display: grid; width: 76px; }
+    .dialog__title { font-size: 25px; }
+    .dialog__plot { font-size: 13px; line-height: 1.7; }
+    .dialog__footer {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+    }
+    .dialog__footer-copy { order: 1; }
+    .dialog__action { order: 0; width: 100%; }
+    .dialog__footer .btn { order: 0; width: 100%; height: 46px; }
+    .dialog__confirm { min-width: 0; }
+    .spec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .requests { margin-top: 38px; }
+    .requests__grid { grid-template-columns: 1fr; margin-top: 16px; }
+    .requests__head { gap: 12px; }
+    .requests__head .btn { width: 100%; height: 40px; margin-top: 2px; }
+    .toasts {
+      right: 12px;
+      left: 12px;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      width: auto;
+    }
+    .results-line { margin-top: 18px; }
+    .results-line__hint { display: none; }
+    .foot { margin-top: 36px; padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
+  }
+  @media (max-width: 600px) {
+    .grid { gap: 12px; }
+    .card { padding: 7px; border-radius: 12px; }
+    .card__body { padding: 9px 2px 2px; }
+    .card__title { font-size: 13px; }
+    .card__meta { margin: 4px 0 8px; font-size: 10.5px; }
+    .btn--card { height: 40px; font-size: 11.5px; gap: 5px; }
+    .badge { top: 7px; left: 7px; padding: 3px 6px; font-size: 9.5px; }
+    .rating { left: 7px; bottom: 7px; padding: 2px 6px; font-size: 10.5px; }
+    .search { height: 52px; padding-left: 13px; gap: 9px; border-radius: 11px; }
+    .search input { font-size: 15px; }
+    .search__kbd { display: none; }
+    .search__clear { width: 36px; height: 36px; }
+    .chip { height: 40px; padding: 0 12px; font-size: 12px; gap: 6px; }
+    .chip__count { min-width: 19px; height: 18px; font-size: 10px; }
+    .select-wrap select { height: 40px; }
+    .request__top { flex-wrap: wrap; row-gap: 3px; }
+    .request__title {
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow: hidden;
+      text-overflow: clip;
+    }
+    .request__meta { white-space: normal; overflow: visible; text-overflow: clip; }
+  }
+  @media (max-width: 520px) {
+    .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hero { padding-top: 28px; }
+    .hero h1 { font-size: clamp(2.1rem, 9vw, 2.7rem); }
+    .hero__lede { font-size: 14px; line-height: 1.62; }
+    .hero__aside { gap: 9px; max-width: none; }
+    .stat { min-height: 146px; padding: 13px; border-radius: 14px; }
+    .stat__main { margin-top: 13px; gap: 7px; }
+    .stat__main strong { font-size: 31px; }
+    .stat__main span { font-size: 10.5px; }
+    .stat__foot { padding-top: 9px; font-size: 9px; }
+    .stat__live, .stat__tag { font-size: 8.5px; }
+    .stat__icon { width: 27px; height: 27px; border-radius: 8px; }
+    .requests__intro { gap: 10px; }
+    .section-icon { width: 34px; height: 34px; border-radius: 10px; }
+    .requests__titleline h2 { font-size: 19px; }
+    .request { padding: 10px; gap: 10px; }
+    .request__thumb { width: 40px; }
+    .request__title { font-size: 12.5px; }
+    .status-chip { font-size: 9px; }
+    .request__foot { font-size: 9px; }
+    .spec-grid { grid-template-columns: 1fr; }
+    .dialog__scroll { padding-inline: 16px; }
+    .dialog__footer { padding-inline: 16px; }
+    .dialog__intro { padding-right: 38px; }
+    .dialog__thumb { width: 66px; }
+    .dialog__title { font-size: 23px; }
+    .dialog__plot { font-size: 12.5px; }
+    .genre { font-size: 9.5px; }
+  }
+  @media (max-width: 360px) {
+    .hero__aside { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .stat { min-height: 112px; padding: 11px; }
+    .stat__foot { display: none; }
+    .stat__top { min-height: 26px; }
+    .stat__icon { width: 26px; height: 26px; border-radius: 7px; }
+    .stat__icon .icon { width: 13px; height: 13px; }
+    .stat__live, .stat__tag { font-size: 8px; letter-spacing: .05em; }
+    .stat__main { margin-top: 12px; gap: 6px; }
+    .stat__main strong { font-size: 28px; }
+    .stat__main span { font-size: 9.5px; line-height: 1.3; }
+    .btn--card { padding: 0 6px; gap: 4px; font-size: 10.5px; }
+    .btn--card .icon { width: 12px; height: 12px; }
+    .request { padding: 9px; gap: 9px; }
+    .request__thumb { width: 36px; }
+    .request__title { font-size: 12px; }
+    .request__meta { font-size: 10px; }
+    .request__foot { font-size: 8.5px; }
+  }
+
+  /* =========================================================
+     Embed in Jellyfin (iframe o ?embed=1)
+     ========================================================= */
+  html.is-embedded .topbar { display: none; }
+  html.is-embedded .toolbar-band { top: 0; }
+  html.is-embedded .hero { padding-top: clamp(20px, 3vw, 34px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: .01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: .01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  @media (prefers-contrast: more) {
+    .card, .request, .stat, .search, .chip, .select-wrap select { border-color: #595959; }
+    .results-line__hint, .stat__foot, .request__meta { color: #b5b5b5; }
+  }
+  @media print {
+    .topbar, .toolbar-band, .toasts, .requests__head .btn, .card__action, .foot { display: none !important; }
+    body { background: #101010; }
+  }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Salta al contenuto</a>
+
+<!-- Icone SVG inline: nessuna dipendenza esterna -->
+<svg class="svg-sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"></path></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4.4 4.4L19 6.6"></path></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="m8 12 2.7 2.7L16.5 9"></path></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2L12 17.3 6.4 20.2l1.1-6.2L3 9.6l6.2-.9L12 3Z" fill="currentColor" stroke="none"></path></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.2 19 12 8 18.8V5.2Z" fill="currentColor" stroke="none"></path></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m0 0 4.5-4.5M12 15l-4.5-4.5"></path><path d="M5 20h14"></path></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 8v5M12 16.6h.01"></path></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 11v5M12 8h.01"></path></symbol>
+  <symbol id="i-film" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"></rect><path d="M7.5 4.5v15M16.5 4.5v15M3.5 9h4M3.5 15h4M16.5 9h4M16.5 15h4"></path></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"></path></symbol>
+  <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 5v14m-5-5 5 5 5-5"></path></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5"></path></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.4-5.7"></path><path d="M20 4v4h-4"></path></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="wrap topbar__inner">
+    <div class="brand" aria-label="Jellyfin">
+      <span class="brand__mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M9 6.2 18.2 12 9 17.8V6.2Z"></path></svg></span>
+      <span>Jellyfin</span>
+    </div>
+    <nav class="crumbs" aria-label="Percorso">
+      <span>Plugin</span>
+      <span class="crumbs__sep" aria-hidden="true">/</span>
+      <span aria-current="page">Richieste film</span>
+    </nav>
+    <div class="topbar__end">
+      <span class="server"><span class="server__dot" aria-hidden="true"></span>Server online</span>
+      <span class="user" title="Profilo famiglia: Marco">
+        <span class="avatar" aria-hidden="true">M</span>
+        <span class="user__name">Marco</span>
+      </span>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+  <div class="wrap">
+    <section class="hero" aria-labelledby="page-title">
+      <div class="hero__copy">
+        <p class="eyebrow"><span class="eyebrow__dot" aria-hidden="true"></span> Catalogo famiglia <span class="eyebrow__muted">· Jellyfin</span></p>
+        <h1 id="page-title">Richiedi un film</h1>
+        <p class="hero__lede">Cerca nel catalogo condiviso e invia una richiesta in pochi secondi. La famiglia riceve un avviso appena il film è pronto da guardare.</p>
+      </div>
+      <aside class="hero__aside" aria-label="Riepilogo richieste">
+        <a class="stat" href="#mie-richieste">
+          <span class="stat__top">
+            <span class="stat__icon"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg></span>
+            <span class="stat__live"><span class="live-dot" aria-hidden="true"></span>In corso</span>
+          </span>
+          <span class="stat__main"><strong id="stat-active">4</strong><span>richieste<br>in corso</span></span>
+          <span class="stat__foot"><span id="stat-breakdown">2 in download · 2 in coda</span><svg class="icon" aria-hidden="true"><use href="#i-arrow-down"></use></svg></span>
+        </a>
+        <div class="stat">
+          <span class="stat__top">
+            <span class="stat__icon"><svg class="icon" aria-hidden="true"><use href="#i-plus"></use></svg></span>
+            <span class="stat__tag">Catalogo</span>
+          </span>
+          <span class="stat__main"><strong id="stat-requestable">7</strong><span>film da<br>richiedere</span></span>
+          <span class="stat__foot">Disponibili per la famiglia</span>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <div class="toolbar-band">
+    <div class="wrap toolbar">
+      <div class="search" id="search-box" role="search">
+        <svg class="icon search__icon" aria-hidden="true"><use href="#i-search"></use></svg>
+        <label class="sr-only" for="movie-search">Cerca un film nel catalogo</label>
+        <input id="movie-search" type="search" placeholder="Cerca un film, un genere o un anno…" autocomplete="off" spellcheck="false" aria-keyshortcuts="/">
+        <span class="search__spinner" id="search-spinner" hidden><span class="spinner" aria-hidden="true"></span></span>
+        <button class="search__clear" id="search-clear" type="button" aria-label="Cancella la ricerca" hidden><svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg></button>
+        <kbd class="search__kbd" aria-hidden="true">/</kbd>
+      </div>
+      <div class="toolbar__row">
+        <div class="filters" role="group" aria-label="Filtra i film per disponibilità">
+          <button class="chip" type="button" data-filter="all" aria-pressed="true">Tutti <span class="chip__count">16</span></button>
+          <button class="chip" type="button" data-filter="available" aria-pressed="false">Disponibili <span class="chip__count">3</span></button>
+          <button class="chip" type="button" data-filter="requestable" aria-pressed="false">Da richiedere <span class="chip__count">7</span></button>
+        </div>
+        <div class="sort">
+          <label for="sort-select">Ordina per</label>
+          <span class="select-wrap">
+            <select id="sort-select">
+              <option value="recommended">Consigliati</option>
+              <option value="year">Anno: più recenti</option>
+              <option value="rating">Voto: più alto</option>
+              <option value="title">Titolo: A–Z</option>
+              <option value="duration">Durata: più breve</option>
+            </select>
+            <svg class="icon select-wrap__chevron" aria-hidden="true"><use href="#i-chevron"></use></svg>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <h2 class="sr-only">Film nel catalogo</h2>
+    <div class="results-line">
+      <p class="results-line__count" id="results-count" role="status" aria-live="polite">16 film</p>
+      <p class="results-line__hint">Seleziona un film per vedere i dettagli</p>
+    </div>
+
+    <div id="catalog-results" aria-busy="false">
+      <div class="grid" id="movie-grid"></div>
+      <div class="empty" id="empty-state" hidden>
+        <span class="empty__art"><svg class="icon" aria-hidden="true"><use href="#i-film"></use></svg></span>
+        <h3 id="empty-title">Nessun film trovato</h3>
+        <p id="empty-copy">Prova con un altro titolo, un genere o l’anno di uscita.</p>
+        <button class="btn btn--soft" id="empty-reset" type="button">Azzera la ricerca</button>
+      </div>
+    </div>
+
+    <section class="requests" id="mie-richieste" aria-labelledby="requests-title">
+      <div class="requests__head">
+        <div class="requests__intro">
+          <span class="section-icon"><svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg></span>
+          <div>
+            <p class="eyebrow eyebrow--small">Coda download</p>
+            <div class="requests__titleline">
+              <h2 id="requests-title">Le mie richieste</h2>
+              <span class="pill" id="requests-count" aria-live="polite">4 attive</span>
+            </div>
+            <p class="requests__sub">Segui l’avanzamento dei film richiesti dalla famiglia.</p>
+          </div>
+        </div>
+        <button class="btn btn--ghost btn--small" id="refresh-requests" type="button" title="Simula un aggiornamento dallo scaricatore">
+          <svg class="icon" aria-hidden="true"><use href="#i-refresh"></use></svg>
+          <span>Aggiorna stato</span>
+        </button>
+      </div>
+      <ul class="requests__grid" id="request-list" aria-label="Richieste della famiglia"></ul>
+      <p class="sr-only" id="requests-status" aria-live="polite"></p>
+    </section>
+
+    <footer class="foot">
+      <p><span class="foot__dot" aria-hidden="true"></span>Jellyfin · Richieste film</p>
+      <p>Mockup UI · Dati di fantasia · Nessuna libreria collegata</p>
+    </footer>
+  </div>
+</main>
+
+<dialog class="movie-dialog" id="movie-dialog" aria-labelledby="dialog-title"></dialog>
+<div class="toasts" id="toasts"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* =========================================================
+     Utility
+     ========================================================= */
+  const $ = (selector, root = document) => root.querySelector(selector);
+  const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+  const esc = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[char]));
+  const icon = (name, extraClass = '') =>
+    `<svg class="icon${extraClass ? ' ' + extraClass : ''}" aria-hidden="true" focusable="false"><use href="#i-${name}"></use></svg>`;
+  const normalize = (value) => String(value)
+    .toLocaleLowerCase('it-IT')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  const formatRating = (rating) => rating.toFixed(1).replace('.', ',');
+  const formatRuntime = (minutes) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours ? `${hours}h ${String(mins).padStart(2, '0')}` : `${mins} min`;
+  };
+  const formatRuntimeLong = (minutes) => {
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return hours ? `${hours} h ${String(mins).padStart(2, '0')} min` : `${mins} min`;
+  };
+  const timeNow = () => new Intl.DateTimeFormat('it-IT', {
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(new Date());
+  const estimateEta = (progress) => {
+    const minutes = Math.max(1, Math.ceil((100 - progress) * 0.22));
+    if (minutes < 60) return `≈ ${minutes} min`;
+    return `≈ ${Math.floor(minutes / 60)} h ${String(minutes % 60).padStart(2, '0')} min`;
+  };
+  const prefersReducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const plural = (count, singular, pluralForm) => `${count} ${count === 1 ? singular : pluralForm}`;
+
+  /* =========================================================
+     Dati fittizi
+     ========================================================= */
+  const PROFILES = {
+    casa: {
+      label: 'Casa · 4K HDR',
+      short: '4K HDR',
+      quality: '4K HDR · Dolby Vision',
+      audio: 'Italiano 5.1 · Originale 7.1',
+      size: '~18 GB'
+    },
+    camera: {
+      label: 'Camera · 1080p',
+      short: '1080p',
+      quality: '1080p · H.264',
+      audio: 'Italiano stereo',
+      size: '~6,4 GB'
+    },
+    bambini: {
+      label: 'Bambini · 1080p',
+      short: '1080p',
+      quality: '1080p · H.264',
+      audio: 'Italiano stereo · volume limitato',
+      size: '~4,8 GB'
+    }
+  };
+
+  const STATUS = {
+    requestable: { label: 'Da richiedere', className: 'badge--requestable' },
+    available: { label: 'Disponibile', className: 'badge--available' },
+    requested: { label: 'Già richiesto', className: 'badge--requested' },
+    downloading: { label: 'In download', className: 'badge--downloading' },
+    unavailable: { label: 'Non disponibile', className: 'badge--unavailable' }
+  };
+
+  const MOVIES = [
+    {
+      id: 'meridian',
+      title: 'Le Ombre di Meridian',
+      year: 2024,
+      runtime: 128,
+      rating: 8.4,
+      cert: '12+',
+      status: 'requestable',
+      genres: ['Fantascienza', 'Thriller'],
+      director: 'Elena Valli',
+      studio: 'Atlante Film',
+      monogram: 'OM',
+      variant: 1,
+      colors: ['#123c45', '#081923', '#1f7f87'],
+      plot: 'Una cartografa scopre che le ombre proiettate sulle mappe di una città costiera nascondono un secondo luogo. Per salvarlo, dovrà attraversare il confine tra memoria e geometria.'
+    },
+    {
+      id: 'faro',
+      title: 'Il Faro di Carta',
+      year: 2023,
+      runtime: 112,
+      rating: 7.6,
+      cert: 'T',
+      status: 'available',
+      genres: ['Dramma', 'Famiglia'],
+      director: 'Tomaso Riva',
+      studio: 'Carta Bianca',
+      monogram: 'FC',
+      variant: 2,
+      colors: ['#5c331c', '#21120c', '#b97a3b'],
+      plot: 'Un guardiano del faro trascorre l’inverno costruendo un faro di carta per il figlio lontano. Quando una tempesta isola il villaggio, quelle pagine diventano l’unica luce.'
+    },
+    {
+      id: 'orbita',
+      title: 'Orbita Silenziosa',
+      year: 2025,
+      runtime: 141,
+      rating: 8.8,
+      cert: '12+',
+      status: 'downloading',
+      genres: ['Fantascienza', 'Dramma'],
+      director: 'Nora Kiel',
+      studio: 'Pulsar Studio',
+      monogram: 'OS',
+      variant: 3,
+      colors: ['#2a1b56', '#0b081d', '#6f55cb'],
+      plot: 'Due astronauti in missione attorno a un pianeta muto ricevono un messaggio che sembra arrivare da casa. La distanza smette di essere una misura.'
+    },
+    {
+      id: 'neon',
+      title: 'Neon Requiem',
+      year: 2022,
+      runtime: 107,
+      rating: 7.1,
+      cert: '16+',
+      status: 'requested',
+      genres: ['Thriller', 'Noir'],
+      director: 'J. Arden',
+      studio: 'Blacklight',
+      monogram: 'NR',
+      variant: 1,
+      colors: ['#4e1033', '#170a1f', '#c13268'],
+      plot: 'In una metropoli dove la notte non finisce mai, un pianista clandestino cerca la melodia che ha fatto sparire sua sorella.'
+    },
+    {
+      id: 'citta',
+      title: 'La Città Senza Cielo',
+      year: 2024,
+      runtime: 123,
+      rating: 8.0,
+      cert: '12+',
+      status: 'requestable',
+      genres: ['Dramma', 'Fantascienza'],
+      director: 'Samuele Neri',
+      studio: 'Cemento Films',
+      monogram: 'CC',
+      variant: 2,
+      colors: ['#1b2b47', '#090f1a', '#5f80a6'],
+      failFirst: true,
+      plot: 'Dopo la scomparsa delle nuvole, una città vive sotto una volta di cemento dipinto. Un ragazzo che disegna cieli scopre una crepa.'
+    },
+    {
+      id: 'vento',
+      title: 'Vento di Sale',
+      year: 2021,
+      runtime: 98,
+      rating: 6.9,
+      cert: 'T',
+      status: 'available',
+      genres: ['Dramma', 'Famiglia'],
+      director: 'Chiara Del Mare',
+      studio: 'Onda Nera',
+      monogram: 'VS',
+      variant: 3,
+      colors: ['#5a3424', '#1c120d', '#b46f4c'],
+      plot: 'Tre generazioni di pescatori si ritrovano in una casa sul porto per un’estate che cambierà le loro rotte.'
+    },
+    {
+      id: 'fermata',
+      title: 'L’Ultima Fermata',
+      year: 2023,
+      runtime: 119,
+      rating: 7.8,
+      cert: '12+',
+      status: 'unavailable',
+      genres: ['Dramma'],
+      director: 'Bruno Sala',
+      studio: 'Linea Nove',
+      monogram: 'UF',
+      variant: 1,
+      colors: ['#27352d', '#0f1411', '#5b7463'],
+      plot: 'L’ultimo autista di linea di un paese che si svuota accompagna i passeggeri che restano, una fermata alla volta.'
+    },
+    {
+      id: 'marea',
+      title: 'Marea Nera',
+      year: 2025,
+      runtime: 134,
+      rating: 8.2,
+      cert: '16+',
+      status: 'requestable',
+      genres: ['Thriller', 'Mistero'],
+      director: 'Ilde Marchetti',
+      studio: 'Abisso',
+      monogram: 'MN',
+      variant: 2,
+      colors: ['#062b3d', '#040f16', '#118095'],
+      plot: 'Una biologa marina indaga su una marea che porta sulla riva oggetti di un naufragio mai avvenuto.'
+    },
+    {
+      id: 'comete',
+      title: 'Piccole Comete',
+      year: 2020,
+      runtime: 105,
+      rating: 7.3,
+      cert: 'T',
+      status: 'available',
+      genres: ['Famiglia', 'Avventura'],
+      director: 'Lea Fontana',
+      studio: 'Minimo Studio',
+      monogram: 'PC',
+      variant: 3,
+      colors: ['#4a1d3b', '#180a14', '#b05d89'],
+      plot: 'Due fratelli costruiscono un telescopio con pezzi di recupero e scoprono che l’universo ha bisogno di essere guardato.'
+    },
+    {
+      id: 'giardino',
+      title: 'Il Giardino di Vetro',
+      year: 2024,
+      runtime: 116,
+      rating: 7.9,
+      cert: '12+',
+      status: 'requested',
+      genres: ['Dramma', 'Mistero'],
+      director: 'Viola Sereni',
+      studio: 'Serra Film',
+      monogram: 'GV',
+      variant: 1,
+      colors: ['#1d3a2c', '#0a1610', '#4f996b'],
+      plot: 'Una serra abbandonata torna a fiorire quando una botanica decide di catalogare le piante che nessuno ha mai visto.'
+    },
+    {
+      id: 'sette-notti',
+      title: 'Sette Notti a Lisbona',
+      year: 2019,
+      runtime: 101,
+      rating: 7.0,
+      cert: 'T',
+      status: 'requestable',
+      genres: ['Romantico', 'Musica'],
+      director: 'Duarte Melo',
+      studio: 'Sette Lab',
+      monogram: 'SN',
+      variant: 2,
+      colors: ['#37284a', '#150e1d', '#8d70b5'],
+      plot: 'Un traduttore segue il fantasma di una voce in sette notti di festa. Ogni canzone gli restituisce un pezzo di una storia d’amore.'
+    },
+    {
+      id: 'frequenze',
+      title: 'Frequenze Perdute',
+      year: 2023,
+      runtime: 126,
+      rating: 7.5,
+      cert: '12+',
+      status: 'downloading',
+      genres: ['Thriller', 'Fantascienza'],
+      director: 'Karim Anselmi',
+      studio: 'Statik',
+      monogram: 'FP',
+      variant: 3,
+      colors: ['#451b17', '#150807', '#a8453a'],
+      plot: 'Un tecnico radio capta una trasmissione da una stazione chiusa da trent’anni. L’ultimo messaggio è indirizzato a lui.'
+    },
+    {
+      id: 'atlas',
+      title: 'L’Atlas delle Nuvole',
+      year: 2025,
+      runtime: 109,
+      rating: 8.1,
+      cert: 'T',
+      status: 'requestable',
+      genres: ['Fantasia', 'Avventura'],
+      director: 'Marta Ode',
+      studio: 'Cumulus',
+      monogram: 'AN',
+      variant: 1,
+      colors: ['#1e3a56', '#0a1622', '#5f9cc7'],
+      plot: 'Una giovane meteorologa mappa le nuvole che nessun satellite riesce a vedere e scopre un atlante che cambia pagina da solo.'
+    },
+    {
+      id: 'pioggia',
+      title: 'Dietro la Pioggia',
+      year: 2022,
+      runtime: 93,
+      rating: 6.7,
+      cert: '12+',
+      status: 'unavailable',
+      genres: ['Dramma'],
+      director: 'Elio Bassi',
+      studio: 'Fotogramma',
+      monogram: 'DP',
+      variant: 2,
+      colors: ['#2b3036', '#101315', '#596770'],
+      plot: 'Un fotografo torna nel paese natale per l’ultimo rullino della madre e ritrova una strada che aveva dimenticato di aver scelto.'
+    },
+    {
+      id: 'nebbia',
+      title: 'Nebbia d’Agosto',
+      year: 2024,
+      runtime: 117,
+      rating: 7.7,
+      cert: '12+',
+      status: 'requestable',
+      genres: ['Mistero', 'Dramma'],
+      director: 'Ada Prati',
+      studio: 'Foschia',
+      monogram: 'NA',
+      variant: 3,
+      colors: ['#0f3a37', '#071917', '#3fa29a'],
+      plot: 'Un paese di montagna si sveglia avvolto dalla nebbia e scopre che il tempo ha saltato un giorno intero. Solo il fornaio se ne ricorda.'
+    },
+    {
+      id: 'notte',
+      title: 'Tutto in Una Notte',
+      year: 2018,
+      runtime: 104,
+      rating: 6.8,
+      cert: 'T',
+      status: 'requestable',
+      genres: ['Commedia', 'Dramma'],
+      director: 'Luca Gori',
+      studio: 'Notte Bianca',
+      monogram: 'TU',
+      variant: 1,
+      colors: ['#2a223d', '#0d0b14', '#7864a9'],
+      plot: 'Un gruppo di amici promette di non tornare a casa finché non avrà visto l’alba. La città, quella notte, ha altri progetti.'
+    }
+  ];
+
+  let requests = [
+    {
+      id: 'req-orbita',
+      movieId: 'orbita',
+      stage: 'downloading',
+      progress: 64,
+      profile: 'casa',
+      requestedBy: 'Marco',
+      requestedAt: 'Oggi, 09:12'
+    },
+    {
+      id: 'req-frequenze',
+      movieId: 'frequenze',
+      stage: 'downloading',
+      progress: 28,
+      profile: 'camera',
+      requestedBy: 'Giulia',
+      requestedAt: 'Oggi, 08:40'
+    },
+    {
+      id: 'req-neon',
+      movieId: 'neon',
+      stage: 'queued',
+      progress: 4,
+      profile: 'casa',
+      requestedBy: 'Marco',
+      requestedAt: 'Ieri, 22:05'
+    },
+    {
+      id: 'req-giardino',
+      movieId: 'giardino',
+      stage: 'queued',
+      progress: 3,
+      profile: 'bambini',
+      requestedBy: 'Giulia',
+      requestedAt: 'Ieri, 19:30'
+    }
+  ];
+
+  const statusOverrides = new Map();
+  const pending = new Map();
+  const failedOnce = new Set();
+  const justRequested = new Set();
+  const justRequestedTimers = new Map();
+  const catalogState = { query: '', filter: 'all', sort: 'recommended', busy: false };
+  let searchTimer = null;
+  let activeDialog = null;
+  let dialogSubmitting = false;
+
+  const dom = {
+    grid: $('#movie-grid'),
+    empty: $('#empty-state'),
+    emptyTitle: $('#empty-title'),
+    emptyCopy: $('#empty-copy'),
+    emptyReset: $('#empty-reset'),
+    catalogResults: $('#catalog-results'),
+    resultsCount: $('#results-count'),
+    searchBox: $('#search-box'),
+    searchInput: $('#movie-search'),
+    searchSpinner: $('#search-spinner'),
+    searchClear: $('#search-clear'),
+    filterButtons: $$('.chip[data-filter]'),
+    sortSelect: $('#sort-select'),
+    requestsList: $('#request-list'),
+    requestsCount: $('#requests-count'),
+    requestsStatus: $('#requests-status'),
+    refreshRequests: $('#refresh-requests'),
+    dialog: $('#movie-dialog'),
+    toasts: $('#toasts'),
+    statActive: $('#stat-active'),
+    statRequestable: $('#stat-requestable'),
+    statBreakdown: $('#stat-breakdown')
+  };
+
+  /* =========================================================
+     Accesso ai dati e formattazione
+     ========================================================= */
+  const getMovie = (id) => MOVIES.find((movie) => movie.id === id);
+  const getStatus = (movie) => statusOverrides.get(movie.id) || movie.status;
+  const getRequestFor = (movieId) => requests.find((request) => request.movieId === movieId);
+
+  function statusBadge(status, extraClass = '') {
+    const meta = STATUS[status];
+    return `<span class="badge ${meta.className}${extraClass ? ' ' + extraClass : ''}"><span class="badge__dot" aria-hidden="true"></span>${meta.label}</span>`;
+  }
+
+  function posterMarkup(movie) {
+    return `<span class="poster poster--v${movie.variant}" style="--c1:${movie.colors[0]};--c2:${movie.colors[1]};--c3:${movie.colors[2]}" aria-hidden="true">
+      <span class="poster__shape"></span>
+      <span class="poster__frame"></span>
+      <span class="poster__mark">${esc(movie.monogram)}</span>
+    </span>`;
+  }
+
+  function ratingMarkup(movie) {
+    return `<span class="rating" role="img" aria-label="Voto ${formatRating(movie.rating)} su 10">${icon('star')}<span aria-hidden="true">${formatRating(movie.rating)}</span></span>`;
+  }
+
+  function actionMarkup(movie) {
+    const status = getStatus(movie);
+    const request = getRequestFor(movie.id);
+    const title = esc(movie.title);
+
+    if (status === 'requestable') {
+      if (pending.get(movie.id) === 'loading') {
+        return `<button class="btn btn--card btn--request" type="button" aria-disabled="true" aria-busy="true" aria-label="Invio della richiesta per ${title} in corso"><span class="spinner spinner--small" aria-hidden="true"></span>Invio…</button>`;
+      }
+      if (pending.get(movie.id) === 'error') {
+        return `<button class="btn btn--card btn--retry" type="button" data-request="${movie.id}" title="Il catalogo non ha risposto. Riprova." aria-label="Riprova la richiesta per ${title}">${icon('alert')}Riprova</button>`;
+      }
+      return `<button class="btn btn--card btn--request" type="button" data-request="${movie.id}" aria-label="Richiedi ${title}">${icon('plus')}Richiedi</button>`;
+    }
+
+    if (status === 'available') {
+      return `<button class="btn btn--card btn--neutral" type="button" data-play="${movie.id}" aria-label="Apri ${title} nella libreria Jellyfin">${icon('play')}Apri</button>`;
+    }
+    if (status === 'requested') {
+      return `<button class="btn btn--card btn--success" type="button" disabled aria-label="${title}: richiesta già inviata">${icon('check')}Richiesto</button>`;
+    }
+    if (status === 'downloading') {
+      const progress = request ? request.progress : 0;
+      return `<button class="btn btn--card btn--download" type="button" disabled aria-label="${title}: download in corso al ${progress} per cento" title="Download in corso · ${progress}%">${icon('download')}In download · ${progress}%</button>`;
+    }
+    return `<button class="btn btn--card btn--neutral" type="button" disabled aria-label="${title}: non disponibile" title="Nessuna fonte disponibile al momento">${icon('close')}Non disponibile</button>`;
+  }
+
+  function cardMarkup(movie) {
+    const status = getStatus(movie);
+    return `<article class="card" data-id="${movie.id}">
+      <div class="card__media">
+        <button class="card__poster" type="button" data-open="${movie.id}" aria-label="Apri i dettagli di ${esc(movie.title)} (${movie.year})">
+          ${posterMarkup(movie)}
+          <span class="card__peek" aria-hidden="true"><span class="card__peek-pill">${icon('info')}Dettagli</span></span>
+        </button>
+        ${statusBadge(status)}
+        ${ratingMarkup(movie)}
+      </div>
+      <div class="card__body">
+        <h3 class="card__title"><button class="card__title-btn" type="button" data-open="${movie.id}">${esc(movie.title)}</button></h3>
+        <p class="card__meta">${movie.year} · ${formatRuntime(movie.runtime)} · ${esc(movie.cert)}</p>
+        <div class="card__action" data-action-slot>${actionMarkup(movie)}</div>
+      </div>
+    </article>`;
+  }
+
+  function updateCardAction(id) {
+    const movie = getMovie(id);
+    const card = dom.grid.querySelector(`.card[data-id="${id}"]`);
+    if (!movie || !card) return;
+    const slot = card.querySelector('[data-action-slot]');
+    if (slot) slot.innerHTML = actionMarkup(movie);
+  }
+
+  function updateCardBadge(id) {
+    const movie = getMovie(id);
+    const card = dom.grid.querySelector(`.card[data-id="${id}"]`);
+    if (!movie || !card) return;
+    const existing = card.querySelector('.badge');
+    if (existing) existing.outerHTML = statusBadge(getStatus(movie));
+  }
+
+  /* =========================================================
+     Ricerca, filtri e ordinamento
+     ========================================================= */
+  function getMatches() {
+    const tokens = normalize(catalogState.query).split(/\s+/).filter(Boolean);
+    if (!tokens.length) return [...MOVIES];
+    return MOVIES.filter((movie) => {
+      const haystack = normalize([
+        movie.title,
+        movie.director,
+        movie.studio,
+        movie.year,
+        ...movie.genres
+      ].join(' '));
+      return tokens.every((token) => haystack.includes(token));
+    });
+  }
+
+  function matchesFilter(movie) {
+    const status = getStatus(movie);
+    if (catalogState.filter === 'available') return status === 'available';
+    if (catalogState.filter === 'requestable') {
+      return status === 'requestable' || justRequested.has(movie.id);
+    }
+    return true;
+  }
+
+  function sortMovies(movies) {
+    const copy = [...movies];
+    switch (catalogState.sort) {
+      case 'year':
+        return copy.sort((a, b) => b.year - a.year || a.title.localeCompare(b.title, 'it'));
+      case 'rating':
+        return copy.sort((a, b) => b.rating - a.rating || b.year - a.year);
+      case 'title':
+        return copy.sort((a, b) => a.title.localeCompare(b.title, 'it'));
+      case 'duration':
+        return copy.sort((a, b) => a.runtime - b.runtime || a.title.localeCompare(b.title, 'it'));
+      default:
+        return copy;
+    }
+  }
+
+  function updateFilterCounts(matches = getMatches()) {
+    const counts = { all: matches.length, available: 0, requestable: 0 };
+    matches.forEach((movie) => {
+      const status = getStatus(movie);
+      if (status === 'available') counts.available += 1;
+      if (status === 'requestable') counts.requestable += 1;
+    });
+    dom.filterButtons.forEach((button) => {
+      const filter = button.dataset.filter;
+      const counter = button.querySelector('.chip__count');
+      if (counter && Number.isFinite(counts[filter])) counter.textContent = String(counts[filter]);
+      button.setAttribute('aria-pressed', String(catalogState.filter === filter));
+    });
+  }
+
+  function updateEmptyCopy(hasMatches) {
+    if (!hasMatches) {
+      dom.emptyTitle.textContent = 'Nessun film trovato';
+      dom.emptyCopy.textContent = 'Prova con un altro titolo, un genere o l’anno di uscita.';
+      dom.emptyReset.textContent = 'Azzera la ricerca';
+      return;
+    }
+    if (catalogState.filter === 'available') {
+      dom.emptyTitle.textContent = 'Nessun film già disponibile';
+      dom.emptyCopy.textContent = 'Con questa ricerca non ci sono film già in libreria. Torna a «Tutti» per vedere il catalogo completo.';
+    } else if (catalogState.filter === 'requestable') {
+      dom.emptyTitle.textContent = 'Nessun film da richiedere';
+      dom.emptyCopy.textContent = 'Con questa ricerca non ci sono film richiedibili. Prova un altro titolo o mostra tutti i film.';
+    } else {
+      dom.emptyTitle.textContent = 'Nessun film in questa vista';
+      dom.emptyCopy.textContent = 'Prova a cambiare filtro per esplorare il resto del catalogo.';
+    }
+    dom.emptyReset.textContent = 'Mostra tutti i film';
+  }
+
+  function renderCatalog() {
+    if (catalogState.busy) return;
+    const matches = getMatches();
+    const visible = sortMovies(matches.filter(matchesFilter));
+
+    updateFilterCounts(matches);
+
+    if (!visible.length) {
+      dom.grid.hidden = true;
+      dom.grid.innerHTML = '';
+      dom.empty.hidden = false;
+      updateEmptyCopy(matches.length > 0);
+      dom.resultsCount.textContent = 'Nessun film trovato';
+      return;
+    }
+
+    dom.empty.hidden = true;
+    dom.grid.hidden = false;
+    dom.grid.innerHTML = visible.map(cardMarkup).join('');
+    dom.resultsCount.innerHTML = `<strong>${visible.length}</strong> ${visible.length === 1 ? 'film trovato' : 'film trovati'}`;
+  }
+
+  function refreshCatalogCounts() {
+    updateFilterCounts(getMatches());
+    updateHeroStats();
+  }
+
+  function setSearchBusy(isBusy) {
+    const wasBusy = catalogState.busy;
+    catalogState.busy = isBusy;
+    dom.searchBox.classList.toggle('is-busy', isBusy);
+    dom.searchSpinner.hidden = !isBusy;
+    dom.catalogResults.setAttribute('aria-busy', String(isBusy));
+    dom.searchClear.hidden = !dom.searchInput.value.trim().length;
+
+    if (isBusy) {
+      if (!wasBusy) {
+        dom.empty.hidden = true;
+        dom.grid.hidden = false;
+        dom.grid.classList.add('grid--skeleton');
+        dom.grid.innerHTML = Array.from({ length: 10 }, () => `
+          <div class="skeleton-card" aria-hidden="true">
+            <div class="sk sk--poster"></div>
+            <div class="sk sk--title"></div>
+            <div class="sk sk--meta"></div>
+            <div class="sk sk--btn"></div>
+          </div>
+        `).join('');
+        dom.resultsCount.textContent = 'Ricerca in corso…';
+      }
+    } else {
+      dom.grid.classList.remove('grid--skeleton');
+    }
+  }
+
+  function commitPendingSearch() {
+    if (!catalogState.busy) return;
+    window.clearTimeout(searchTimer);
+    catalogState.query = dom.searchInput.value.trim();
+    setSearchBusy(false);
+    renderCatalog();
+  }
+
+  function clearSearch({ focus = true } = {}) {
+    window.clearTimeout(searchTimer);
+    dom.searchInput.value = '';
+    dom.searchClear.hidden = true;
+    dom.searchBox.classList.remove('has-value');
+    catalogState.query = '';
+    setSearchBusy(false);
+    renderCatalog();
+    if (focus) dom.searchInput.focus({ preventScroll: true });
+  }
+
+  function resetCatalog() {
+    window.clearTimeout(searchTimer);
+    dom.searchInput.value = '';
+    dom.searchClear.hidden = true;
+    dom.searchBox.classList.remove('has-value');
+    catalogState.query = '';
+    catalogState.filter = 'all';
+    setSearchBusy(false);
+    updateFilterCounts();
+    renderCatalog();
+    dom.searchInput.focus({ preventScroll: true });
+  }
+
+  /* =========================================================
+     Riepilogo e richieste
+     ========================================================= */
+  function updateHeroStats() {
+    const active = requests.filter((request) => request.stage !== 'ready');
+    const downloading = requests.filter((request) => request.stage === 'downloading').length;
+    const queued = requests.filter((request) => request.stage === 'queued').length;
+    const requestable = MOVIES.filter((movie) => getStatus(movie) === 'requestable').length;
+
+    dom.statActive.textContent = String(active.length);
+    dom.statRequestable.textContent = String(requestable);
+
+    if (!active.length) {
+      dom.statBreakdown.textContent = 'Tutto pronto da guardare';
+      return;
+    }
+    const parts = [];
+    if (downloading) parts.push(`${downloading} in download`);
+    if (queued) parts.push(`${queued} in coda`);
+    dom.statBreakdown.textContent = parts.join(' · ');
+  }
+
+  function requestStageMeta(request, queuePosition) {
+    if (request.stage === 'queued') {
+      return {
+        chip: 'In coda',
+        chipClass: 'status-chip--queued',
+        barClass: 'progress__bar--queued',
+        left: `In attesa · posizione ${queuePosition}`
+      };
+    }
+    if (request.stage === 'ready') {
+      return {
+        chip: 'Pronto',
+        chipClass: 'status-chip--ready',
+        barClass: 'progress__bar--ready',
+        left: 'Pronto su Jellyfin'
+      };
+    }
+    return {
+      chip: 'In download',
+      chipClass: 'status-chip--downloading',
+      barClass: 'progress__bar--downloading',
+      left: `Download in corso · ${estimateEta(request.progress)}`
+    };
+  }
+
+  function requestRowMarkup(request, queuePosition) {
+    const movie = getMovie(request.movieId);
+    if (!movie) return '';
+    const profile = PROFILES[request.profile] || PROFILES.casa;
+    const meta = requestStageMeta(request, queuePosition);
+    const progress = Math.max(0, Math.min(100, request.progress));
+    return `<li class="request">
+      <span class="request__thumb" style="--c1:${movie.colors[0]};--c2:${movie.colors[1]};--c3:${movie.colors[2]}" aria-hidden="true">${esc(movie.monogram)}</span>
+      <div class="request__body">
+        <div class="request__top">
+          <button class="request__title" type="button" data-open="${movie.id}" title="${esc(movie.title)}">${esc(movie.title)}</button>
+          <span class="status-chip ${meta.chipClass}"><span class="badge__dot" aria-hidden="true"></span>${meta.chip}</span>
+        </div>
+        <p class="request__meta">${movie.year} · ${esc(profile.short)} · ${esc(request.requestedBy)} · ${esc(request.requestedAt)}</p>
+        <div class="progress" role="progressbar" aria-label="Avanzamento di ${esc(movie.title)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress}">
+          <span class="progress__bar ${meta.barClass}" style="width:${progress}%"></span>
+        </div>
+        <div class="request__foot"><span>${meta.left}</span><span>${progress}%</span></div>
+      </div>
+    </li>`;
+  }
+
+  function renderRequests() {
+    const queued = requests.filter((request) => request.stage === 'queued');
+    const active = requests.filter((request) => request.stage !== 'ready');
+
+    dom.requestsCount.textContent = active.length
+      ? plural(active.length, 'attiva', 'attive')
+      : 'Tutto pronto';
+    dom.requestsCount.classList.toggle('is-done', active.length === 0);
+
+    if (!requests.length) {
+      dom.requestsList.innerHTML = '<li class="requests__empty">Le richieste che invii appariranno qui.</li>';
+    } else {
+      dom.requestsList.innerHTML = requests.map((request) => {
+        const index = queued.findIndex((item) => item.id === request.id);
+        return requestRowMarkup(request, index + 1);
+      }).join('');
+    }
+
+    if (!dom.refreshRequests.classList.contains('is-loading')) {
+      dom.refreshRequests.disabled = active.length === 0;
+    }
+    updateHeroStats();
+  }
+
+  function scrollToRequests() {
+    const section = $('#mie-richieste');
+    const heading = $('#requests-title');
+    if (!section || !heading) return;
+    section.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      block: 'start'
+    });
+    heading.setAttribute('tabindex', '-1');
+    window.setTimeout(() => heading.focus({ preventScroll: true }), prefersReducedMotion() ? 0 : 340);
+  }
+
+  /* =========================================================
+     Simulazione richiesta + avanzamento download
+     ========================================================= */
+  function simulateSubmit(movie) {
+    return new Promise((resolve) => {
+      window.setTimeout(() => {
+        if (movie.failFirst && !failedOnce.has(movie.id)) {
+          failedOnce.add(movie.id);
+          resolve({
+            ok: false,
+            message: 'Il catalogo non ha risposto. Controlla la connessione e riprova.'
+          });
+          return;
+        }
+        resolve({ ok: true });
+      }, 900);
+    });
+  }
+
+  function registerRequest(movie, profileKey = 'casa') {
+    statusOverrides.set(movie.id, 'requested');
+    requests.unshift({
+      id: `req-${movie.id}-${Date.now()}`,
+      movieId: movie.id,
+      stage: 'queued',
+      progress: 4,
+      profile: profileKey,
+      requestedBy: 'Marco',
+      requestedAt: `Oggi, ${timeNow()}`
+    });
+    justRequested.add(movie.id);
+    window.clearTimeout(justRequestedTimers.get(movie.id));
+    justRequestedTimers.set(movie.id, window.setTimeout(() => {
+      justRequested.delete(movie.id);
+      if (catalogState.filter === 'requestable' && !catalogState.busy) renderCatalog();
+    }, 1900));
+  }
+
+  async function handleCardRequest(id, options = {}) {
+    const movie = getMovie(id);
+    if (!movie || getStatus(movie) !== 'requestable' || pending.get(id) === 'loading') return;
+
+    const card = dom.grid.querySelector(`.card[data-id="${id}"]`);
+    const hadFocus = Boolean(card && card.contains(document.activeElement));
+
+    pending.set(id, 'loading');
+    updateCardAction(id);
+
+    const result = await simulateSubmit(movie);
+
+    if (result.ok) {
+      pending.delete(id);
+      registerRequest(movie, 'casa');
+      updateCardBadge(id);
+      updateCardAction(id);
+      if (card) {
+        card.classList.add('is-success');
+        window.setTimeout(() => card.classList.remove('is-success'), 1900);
+      }
+      refreshCatalogCounts();
+      renderRequests();
+      showToast({
+        type: 'success',
+        title: 'Richiesta inviata',
+        message: `«${movie.title}» è in coda. Ti avviseremo quando sarà pronta da guardare.`,
+        actionLabel: 'Vedi richieste',
+        onAction: scrollToRequests
+      });
+      if (options.restoreFocus && hadFocus) {
+        const titleButton = card && card.querySelector('.card__title-btn');
+        if (titleButton) titleButton.focus({ preventScroll: true });
+      }
+      return;
+    }
+
+    pending.set(id, 'error');
+    updateCardAction(id);
+    showToast({
+      type: 'error',
+      title: 'Richiesta non inviata',
+      message: result.message,
+      actionLabel: 'Riprova',
+      onAction: () => handleCardRequest(id)
+    });
+    if (options.restoreFocus && hadFocus) {
+      const retryButton = dom.grid.querySelector(`.card[data-id="${id}"] [data-request]`);
+      if (retryButton) retryButton.focus({ preventScroll: true });
+    }
+  }
+
+  function showAvailableInfo(id) {
+    const movie = getMovie(id);
+    if (!movie) return;
+    showToast({
+      type: 'info',
+      title: 'Già nella tua libreria',
+      message: `«${movie.title}» è disponibile su Jellyfin. Aprilo dalla sezione Film per guardarlo.`
+    });
+  }
+
+  function advanceRequests() {
+    if (dom.refreshRequests.disabled || dom.refreshRequests.classList.contains('is-loading')) return;
+    const active = requests.filter((request) => request.stage !== 'ready');
+    if (!active.length) return;
+
+    const label = dom.refreshRequests.querySelector('span');
+    dom.refreshRequests.classList.add('is-loading');
+    dom.refreshRequests.disabled = true;
+    dom.refreshRequests.setAttribute('aria-busy', 'true');
+    if (label) label.textContent = 'Aggiorno…';
+
+    window.setTimeout(() => {
+      const readyNow = [];
+
+      requests.forEach((request) => {
+        if (request.stage === 'queued') {
+          request.stage = 'downloading';
+          request.progress = Math.max(12, request.progress);
+          statusOverrides.set(request.movieId, 'downloading');
+          return;
+        }
+        if (request.stage === 'downloading') {
+          request.progress = Math.min(100, request.progress + 18);
+          if (request.progress >= 100) {
+            request.stage = 'ready';
+            request.progress = 100;
+            statusOverrides.set(request.movieId, 'available');
+            const movie = getMovie(request.movieId);
+            if (movie) readyNow.push(movie);
+          } else {
+            statusOverrides.set(request.movieId, 'downloading');
+          }
+        }
+      });
+
+      if (!catalogState.busy) renderCatalog();
+      else updateFilterCounts(getMatches());
+      renderRequests();
+      updateHeroStats();
+
+      dom.refreshRequests.classList.remove('is-loading');
+      dom.refreshRequests.removeAttribute('aria-busy');
+      if (label) label.textContent = 'Aggiorna stato';
+      dom.refreshRequests.disabled = requests.every((request) => request.stage === 'ready');
+
+      if (readyNow.length) {
+        showToast({
+          type: 'success',
+          title: readyNow.length === 1 ? 'Pronto da guardare' : 'Richieste completate',
+          message: readyNow.length === 1
+            ? `«${readyNow[0].title}» è stato aggiunto alla libreria.`
+            : `${readyNow.length} film sono stati aggiunti alla libreria.`,
+          actionLabel: 'Vedi richieste',
+          onAction: scrollToRequests
+        });
+        dom.requestsStatus.textContent = `${plural(readyNow.length, 'richiesta completata', 'richieste completate')}.`;
+      } else {
+        const stillActive = requests.filter((request) => request.stage !== 'ready').length;
+        dom.requestsStatus.textContent = `Stato aggiornato. ${plural(stillActive, 'richiesta in corso', 'richieste in corso')}.`;
+      }
+    }, 640);
+  }
+
+  /* =========================================================
+     Dettaglio film (dialog nativo)
+     ========================================================= */
+  const REQUEST_ERROR = 'Il catalogo non ha risposto. Controlla la connessione e riprova.';
+
+  function dialogHint(status, request) {
+    switch (status) {
+      case 'requestable':
+        return 'Scegli il profilo di download e invia la richiesta. Sarà visibile a tutta la famiglia.';
+      case 'requested':
+        return 'La richiesta è in coda. Riceverai un avviso quando inizierà il download.';
+      case 'downloading':
+        return `Download in corso: ${request ? request.progress : 0}% · ${request ? estimateEta(request.progress) : 'tempo variabile'} rimanenti.`;
+      case 'available':
+        return 'È già nella libreria Jellyfin. Nessuna richiesta necessaria.';
+      default:
+        return 'Nessuna fonte disponibile al momento. Riprova più tardi.';
+    }
+  }
+
+  function dialogButtonMarkup(movie) {
+    if (!activeDialog) return '';
+    if (activeDialog.success) {
+      return `<button class="btn btn--success dialog__confirm" type="button" disabled>${icon('check')}Richiesta inviata</button>`;
+    }
+    if (dialogSubmitting) {
+      return `<button class="btn btn--primary dialog__confirm" type="button" disabled aria-busy="true"><span class="spinner" aria-hidden="true"></span>Invio…</button>`;
+    }
+
+    const status = getStatus(movie);
+    const request = getRequestFor(movie.id);
+
+    if (status === 'requestable') {
+      const hasError = pending.get(movie.id) === 'error' || activeDialog.error;
+      return `<button class="btn btn--primary dialog__confirm" type="button" data-confirm>${icon(hasError ? 'alert' : 'check')}${hasError ? 'Riprova' : 'Conferma richiesta'}</button>`;
+    }
+    if (status === 'downloading') {
+      return `<button class="btn btn--download dialog__confirm" type="button" disabled>${icon('download')}In download · ${request ? request.progress : 0}%</button>`;
+    }
+    if (status === 'requested') {
+      return `<button class="btn btn--success dialog__confirm" type="button" disabled>${icon('check')}Già richiesto</button>`;
+    }
+    if (status === 'available') {
+      return `<button class="btn btn--success dialog__confirm" type="button" disabled>${icon('play')}Nella libreria</button>`;
+    }
+    return `<button class="btn btn--neutral dialog__confirm" type="button" disabled>${icon('close')}Non disponibile</button>`;
+  }
+
+  function dialogMarkup(movie) {
+    const status = getStatus(movie);
+    const request = getRequestFor(movie.id);
+    const profile = PROFILES[activeDialog.profile] || PROFILES.casa;
+    const errorVisible = Boolean(activeDialog.error);
+    const selectDisabled = status !== 'requestable' || activeDialog.success;
+    const colorVars = `--c1:${movie.colors[0]};--c2:${movie.colors[1]};--c3:${movie.colors[2]}`;
+
+    return `<div class="dialog__panel">
+      <button class="dialog__close" type="button" data-close aria-label="Chiudi i dettagli">${icon('close')}</button>
+      <div class="dialog__media" style="${colorVars}">
+        <div class="dialog__poster-block">
+          <div class="dialog__poster">${posterMarkup(movie)}</div>
+          <p class="dialog__poster-caption">${esc(movie.studio)} · ${movie.year}</p>
+        </div>
+      </div>
+      <div class="dialog__content">
+        <div class="dialog__scroll">
+          <div class="dialog__intro">
+            <span class="dialog__thumb" style="${colorVars}" aria-hidden="true">${esc(movie.monogram)}</span>
+            <div>
+              <p class="dialog__eyebrow">Film nel catalogo · ${movie.year}</p>
+              <h2 class="dialog__title" id="dialog-title">${esc(movie.title)}</h2>
+              <p class="dialog__meta">${formatRuntimeLong(movie.runtime)} · ${movie.genres.map(esc).join(' · ')}</p>
+            </div>
+          </div>
+
+          <div class="dialog__statusrow">
+            ${statusBadge(status)}
+            <span class="dialog__rating" role="img" aria-label="Voto ${formatRating(movie.rating)} su 10">${icon('star')}<span aria-hidden="true">${formatRating(movie.rating)}</span><small aria-hidden="true">/10</small></span>
+            <span class="dialog__cert">${esc(movie.cert)}</span>
+          </div>
+
+          <p class="dialog__plot" id="dialog-plot">${esc(movie.plot)}</p>
+
+          <ul class="genre-chips" aria-label="Generi">
+            ${movie.genres.map((genre) => `<li class="genre">${esc(genre)}</li>`).join('')}
+          </ul>
+
+          <h3 class="dialog__label">Dettagli tecnici</h3>
+          <dl class="spec-grid">
+            <div class="spec"><dt>Qualità</dt><dd id="dialog-quality">${esc(profile.quality)}</dd></div>
+            <div class="spec"><dt>Audio</dt><dd id="dialog-audio">${esc(profile.audio)}</dd></div>
+            <div class="spec"><dt>Dimensione stimata</dt><dd id="dialog-size">${esc(profile.size)}</dd></div>
+            <div class="spec"><dt>Regia</dt><dd>${esc(movie.director)}</dd></div>
+          </dl>
+
+          <h3 class="dialog__label">Profilo di download</h3>
+          <div class="profile-box">
+            <label class="sr-only" for="dialog-profile">Profilo di download</label>
+            <span class="select-wrap">
+              <select id="dialog-profile" ${selectDisabled ? 'disabled' : ''}>
+                ${Object.entries(PROFILES).map(([key, value]) => `<option value="${key}" ${key === activeDialog.profile ? 'selected' : ''}>${esc(value.label)}</option>`).join('')}
+              </select>
+              <svg class="icon select-wrap__chevron" aria-hidden="true"><use href="#i-chevron"></use></svg>
+            </span>
+            <p class="profile-box__hint">La qualità viene adattata al dispositivo scelto. La richiesta sarà visibile a tutta la famiglia.</p>
+          </div>
+        </div>
+
+        <footer class="dialog__footer">
+          <div class="dialog__footer-copy">
+            <p class="dialog__hint" id="dialog-hint" ${errorVisible ? 'hidden' : ''}>${esc(dialogHint(status, request))}</p>
+            <p class="dialog__error" id="dialog-error" role="alert" ${errorVisible ? '' : 'hidden'}>${icon('alert')}<span>${esc(REQUEST_ERROR)}</span></p>
+          </div>
+          <div class="dialog__action" id="dialog-action">${dialogButtonMarkup(movie)}</div>
+        </footer>
+      </div>
+    </div>`;
+  }
+
+  function renderDialogAction() {
+    if (!activeDialog) return;
+    const host = $('#dialog-action');
+    const movie = getMovie(activeDialog.movieId);
+    if (host && movie) host.innerHTML = dialogButtonMarkup(movie);
+  }
+
+  function setDialogSubmitting(isSubmitting) {
+    dialogSubmitting = isSubmitting;
+    const movie = activeDialog ? getMovie(activeDialog.movieId) : null;
+    const status = movie ? getStatus(movie) : null;
+    const closeButton = $('.dialog__close', dom.dialog);
+    const profileSelect = $('#dialog-profile');
+    const hint = $('#dialog-hint');
+    const error = $('#dialog-error');
+
+    if (closeButton) closeButton.disabled = isSubmitting;
+    if (profileSelect) profileSelect.disabled = isSubmitting || status !== 'requestable';
+    if (isSubmitting) {
+      if (hint) {
+        hint.hidden = false;
+        hint.textContent = 'Invio della richiesta al catalogo…';
+      }
+      if (error) error.hidden = true;
+    }
+    renderDialogAction();
+  }
+
+  function showDialogError(message) {
+    const hint = $('#dialog-hint');
+    const error = $('#dialog-error');
+    const closeButton = $('.dialog__close', dom.dialog);
+    const profileSelect = $('#dialog-profile');
+    if (hint) hint.hidden = true;
+    if (error) {
+      error.hidden = false;
+      const copy = error.querySelector('span');
+      if (copy) copy.textContent = message;
+    }
+    if (closeButton) closeButton.disabled = false;
+    if (profileSelect) profileSelect.disabled = false;
+    renderDialogAction();
+    const retryButton = $('[data-confirm]', dom.dialog);
+    if (retryButton) retryButton.focus({ preventScroll: true });
+  }
+
+  function openDialog(id) {
+    const movie = getMovie(id);
+    if (!movie || pending.get(id) === 'loading') return;
+
+    if (dom.dialog.open) dom.dialog.close();
+
+    const request = getRequestFor(id);
+    activeDialog = {
+      movieId: id,
+      profile: request ? request.profile : 'casa',
+      success: false,
+      error: pending.get(id) === 'error'
+    };
+    dialogSubmitting = false;
+    dom.dialog.innerHTML = dialogMarkup(movie);
+    document.body.classList.add('modal-open');
+    dom.dialog.showModal();
+
+    const panel = $('.dialog__panel', dom.dialog);
+    if (panel) {
+      panel.setAttribute('tabindex', '-1');
+      panel.focus({ preventScroll: true });
+    }
+  }
+
+  async function confirmDialogRequest() {
+    if (!activeDialog || dialogSubmitting || activeDialog.success) return;
+    const movie = getMovie(activeDialog.movieId);
+    if (!movie || getStatus(movie) !== 'requestable' || pending.get(movie.id) === 'loading') return;
+
+    const profileKey = activeDialog.profile;
+    setDialogSubmitting(true);
+    const result = await simulateSubmit(movie);
+
+    if (!activeDialog || activeDialog.movieId !== movie.id) return;
+
+    if (result.ok) {
+      pending.delete(movie.id);
+      registerRequest(movie, profileKey);
+      activeDialog.success = true;
+      activeDialog.error = false;
+      dialogSubmitting = false;
+
+      const closeButton = $('.dialog__close', dom.dialog);
+      if (closeButton) closeButton.disabled = false;
+      renderDialogAction();
+
+      const hint = $('#dialog-hint');
+      if (hint) {
+        hint.hidden = false;
+        hint.textContent = 'Richiesta registrata. Ti avviseremo appena il film sarà pronto.';
+      }
+      const error = $('#dialog-error');
+      if (error) error.hidden = true;
+
+      refreshCatalogCounts();
+      renderRequests();
+
+      const movieId = movie.id;
+      const profileLabel = (PROFILES[profileKey] || PROFILES.casa).short;
+
+      window.setTimeout(() => {
+        if (dom.dialog.open) dom.dialog.close();
+        window.clearTimeout(justRequestedTimers.get(movieId));
+        justRequested.delete(movieId);
+        renderCatalog();
+        renderRequests();
+        showToast({
+          type: 'success',
+          title: 'Richiesta inviata',
+          message: `«${movie.title}» è in coda con profilo ${profileLabel}. Puoi seguirla in «Le mie richieste».`,
+          actionLabel: 'Vedi richieste',
+          onAction: scrollToRequests
+        });
+      }, 820);
+      return;
+    }
+
+    pending.set(movie.id, 'error');
+    dialogSubmitting = false;
+    activeDialog.error = true;
+    showDialogError(result.message);
+  }
+
+  /* =========================================================
+     Toast
+     ========================================================= */
+  function showToast({ type = 'info', title, message, actionLabel, onAction, duration = 5600 }) {
+    if (!title) return;
+    const toast = document.createElement('div');
+    const iconName = type === 'success' ? 'check-circle' : type === 'error' ? 'alert' : 'info';
+    toast.className = `toast toast--${type}`;
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+    toast.innerHTML = `
+      <span class="toast__icon">${icon(iconName)}</span>
+      <div class="toast__body">
+        <p class="toast__title"></p>
+        <p class="toast__message"></p>
+        <button class="toast__action" type="button" hidden></button>
+      </div>
+      <button class="toast__close" type="button" aria-label="Chiudi notifica">${icon('close')}</button>`;
+
+    const titleNode = $('.toast__title', toast);
+    const messageNode = $('.toast__message', toast);
+    const actionNode = $('.toast__action', toast);
+    const closeNode = $('.toast__close', toast);
+    if (titleNode) titleNode.textContent = title;
+    if (messageNode) messageNode.textContent = message || '';
+
+    let dismissed = false;
+    let timer = 0;
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
+      window.clearTimeout(timer);
+      toast.classList.add('is-leaving');
+      window.setTimeout(() => toast.remove(), 210);
+    };
+
+    if (actionLabel && onAction) {
+      actionNode.hidden = false;
+      actionNode.textContent = actionLabel;
+      actionNode.addEventListener('click', () => {
+        dismiss();
+        onAction();
+      });
+    }
+    closeNode.addEventListener('click', dismiss);
+
+    dom.toasts.appendChild(toast);
+    while (dom.toasts.children.length > 3) {
+      dom.toasts.firstElementChild.remove();
+    }
+
+    timer = window.setTimeout(dismiss, duration);
+    toast.addEventListener('mouseenter', () => window.clearTimeout(timer));
+    toast.addEventListener('mouseleave', () => {
+      if (!dismissed) timer = window.setTimeout(dismiss, 1800);
+    });
+    toast.addEventListener('focusin', () => window.clearTimeout(timer));
+    toast.addEventListener('focusout', () => {
+      if (!dismissed) timer = window.setTimeout(dismiss, 1800);
+    });
+  }
+
+  /* =========================================================
+     Eventi
+     ========================================================= */
+  dom.searchInput.addEventListener('input', () => {
+    const raw = dom.searchInput.value;
+    const hasText = raw.trim().length > 0;
+    dom.searchClear.hidden = !hasText;
+    dom.searchBox.classList.toggle('has-value', hasText);
+    window.clearTimeout(searchTimer);
+
+    if (!hasText) {
+      catalogState.query = '';
+      setSearchBusy(false);
+      renderCatalog();
+      return;
+    }
+
+    if (!catalogState.busy) setSearchBusy(true);
+    searchTimer = window.setTimeout(() => {
+      catalogState.query = raw.trim();
+      setSearchBusy(false);
+      renderCatalog();
+    }, 420);
+  });
+
+  dom.searchInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      if (dom.searchInput.value) {
+        event.preventDefault();
+        clearSearch();
+      } else {
+        dom.searchInput.blur();
+      }
+      return;
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      if (catalogState.busy) commitPendingSearch();
+    }
+  });
+
+  dom.searchClear.addEventListener('click', () => clearSearch());
+
+  dom.filterButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      if (catalogState.busy) {
+        window.clearTimeout(searchTimer);
+        catalogState.query = dom.searchInput.value.trim();
+        setSearchBusy(false);
+      }
+      catalogState.filter = button.dataset.filter;
+      renderCatalog();
+    });
+  });
+
+  dom.sortSelect.addEventListener('change', () => {
+    if (catalogState.busy) {
+      window.clearTimeout(searchTimer);
+      catalogState.query = dom.searchInput.value.trim();
+      setSearchBusy(false);
+    }
+    catalogState.sort = dom.sortSelect.value;
+    renderCatalog();
+  });
+
+  dom.emptyReset.addEventListener('click', resetCatalog);
+
+  dom.grid.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return;
+    const openTrigger = event.target.closest('[data-open]');
+    if (openTrigger) {
+      openDialog(openTrigger.dataset.open);
+      return;
+    }
+    const requestTrigger = event.target.closest('[data-request]');
+    if (requestTrigger) {
+      handleCardRequest(requestTrigger.dataset.request, { restoreFocus: event.detail === 0 });
+      return;
+    }
+    const playTrigger = event.target.closest('[data-play]');
+    if (playTrigger) {
+      showAvailableInfo(playTrigger.dataset.play);
+      return;
+    }
+    const card = event.target.closest('.card');
+    if (card && event.target.closest('.card__media')) {
+      openDialog(card.dataset.id);
+    }
+  });
+
+  dom.requestsList.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return;
+    const openTrigger = event.target.closest('[data-open]');
+    if (openTrigger) openDialog(openTrigger.dataset.open);
+  });
+
+  dom.refreshRequests.addEventListener('click', advanceRequests);
+
+  dom.dialog.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element)) return;
+    if (event.target.closest('[data-close]')) {
+      if (!dialogSubmitting) dom.dialog.close();
+      return;
+    }
+    if (event.target.closest('[data-confirm]')) {
+      confirmDialogRequest();
+      return;
+    }
+    if (event.target === dom.dialog && !dialogSubmitting) {
+      dom.dialog.close();
+    }
+  });
+
+  dom.dialog.addEventListener('change', (event) => {
+    if (!activeDialog || event.target.id !== 'dialog-profile') return;
+    const key = event.target.value;
+    activeDialog.profile = key;
+    const profile = PROFILES[key] || PROFILES.casa;
+    const quality = $('#dialog-quality');
+    const audio = $('#dialog-audio');
+    const size = $('#dialog-size');
+    if (quality) quality.textContent = profile.quality;
+    if (audio) audio.textContent = profile.audio;
+    if (size) size.textContent = profile.size;
+  });
+
+  dom.dialog.addEventListener('cancel', (event) => {
+    if (dialogSubmitting) event.preventDefault();
+  });
+
+  dom.dialog.addEventListener('close', () => {
+    const lastMovieId = activeDialog ? activeDialog.movieId : null;
+    document.body.classList.remove('modal-open');
+    dialogSubmitting = false;
+    activeDialog = null;
+    if (lastMovieId) updateCardAction(lastMovieId);
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== '/' || event.metaKey || event.ctrlKey || event.altKey) return;
+    if (dom.dialog.open) return;
+    const target = event.target;
+    const tagName = target && target.tagName ? target.tagName : '';
+    if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT' || (target && target.isContentEditable)) return;
+    event.preventDefault();
+    dom.searchInput.focus();
+  });
+
+  /* =========================================================
+     Avvio
+     ========================================================= */
+  const isEmbedded = window.self !== window.top || new URLSearchParams(window.location.search).get('embed') === '1';
+  document.documentElement.classList.toggle('is-embedded', isEmbedded);
+
+  const compactSearch = window.matchMedia('(max-width: 360px)');
+  const syncSearchPlaceholder = () => {
+    dom.searchInput.placeholder = compactSearch.matches
+      ? 'Cerca un film…'
+      : 'Cerca un film, un genere o un anno…';
+  };
+  syncSearchPlaceholder();
+  if (typeof compactSearch.addEventListener === 'function') {
+    compactSearch.addEventListener('change', syncSearchPlaceholder);
+  }
+
+  renderCatalog();
+  renderRequests();
+  updateFilterCounts();
+  updateHeroStats();
+})();
+</script>
+</body>
+</html>

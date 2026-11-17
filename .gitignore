@@ -1,0 +1,17 @@
+# Segreti: non committare mai
+.env
+.env.*
+!.env.example
+*.token
+.webtoken
+*.pem
+*.key
+
+# Backup / artefatti locali
+backups/
+*.tar.gz
+*.zip
+*.log
+.DS_Store
+node_modules/
+.tools/
