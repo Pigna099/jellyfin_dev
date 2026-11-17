@@ -71,6 +71,9 @@ if [ -d "$META" ]; then
   mkdir -p "$DEST/system/meta"
   cp -a "$META"/. "$DEST/system/meta/" 2>/dev/null || true
 fi
+if [ -f /src/fstab ]; then
+  cp /src/fstab "$DEST/system/fstab"
+fi
 
 echo "-- permessi"
 find "$DEST" -type d -exec chmod 750 {} \;

@@ -2,6 +2,8 @@
 
 Aggiunge a **Jellyfin** una sezione per **cercare e richiedere film**, con le richieste che finiscono automaticamente in **Radarr** e quindi in download tramite qBittorrent.
 
+> `SYSTEM.md` sul server (`/home/dante/SYSTEM.md`) è aggiornato al **2026-11-17** con questo setup.
+
 Implementazione attiva sul server `192.168.1.30` (dante-HP):
 
 - **Jellyfin 10.11.11** — container `jellyfin`, rete host, porta `8096`.
@@ -91,6 +93,7 @@ docker run --rm -e STAMP="$STAMP" \
   -v /mnt/media/pignify/lidarr:/src/lidarr:ro \
   -v /etc/nginx:/src/nginx:ro \
   -v /etc/letsencrypt:/src/letsencrypt:ro \
+  -v /etc/fstab:/src/fstab:ro \
   -v /etc/wireguard:/src/wireguard:ro \
   -v /etc/systemd/system:/src/systemd:ro \
   -v /var/spool/cron/crontabs:/src/crontabs:ro \
@@ -175,8 +178,12 @@ Impostazioni principali: URL Seerr, API key, auto-approve famiglia, niente 4K.
 | Post-backend | `/mnt/backup/config-backups/2026-11-17_1725-post-request` | Seerr config+DB, plugin/config Jellyfin Enhanced, DB Jellyfin, config Jellyfin, compose/.env Seerr |
 | Post-UI | `/mnt/backup/config-backups/2026-11-17_1745-post-request` | Seerr config+DB, tutti i plugin Jellyfin (JE, Bridge, Custom Tabs, File Transformation), DB/config Jellyfin, compose/.env |
 | Post-UI minima (finale) | `/mnt/backup/config-backups/2026-11-17_1826-post-request` | Seerr config+DB, plugin/DB/config Jellyfin, compose/.env |
+| Full pre-HDD | `/mnt/backup/2026-11-17_1905` | Jellyfin, Seerr, *arr, qBittorrent, Nginx, Let's Encrypt, WireGuard, systemd |
+| Storage post-HDD | `/mnt/backup/config-backups/2026-11-17_1925-hdd` | qBittorrent config, fstab, path/categorie |
 
 Tutti hanno `SHA256SUMS` verificato e DB con `PRAGMA integrity_check = ok`.
+
+> Nota: la copia dei media del vecchio HDD_WD_1 è in `/mnt/backup/current/HDD_WD_1` (snapshot 2026-11-15).
 
 Per un backup futuro completo usare `scripts/backup-configs.sh` (include anche Seerr). Non vengono mai copiati i media.
 
@@ -184,22 +191,37 @@ Per un backup futuro completo usare `scripts/backup-configs.sh` (include anche S
 
 Il disco root era pieno al **100%** perché qBittorrent salvava i download in `/home/dante/Downloads/temp` (disco di sistema). Questo causava anche scritture fallite di Jellyfin/plugin e la sparizione della UI.
 
-Correzione applicata:
+Configurazione definitiva:
 
-- qBittorrent `save_path` → `/mnt/media/downloads`;
-- categoria `radarr` (path relativo `movies`) → `/mnt/media/downloads/movies`;
-- torrent esistenti spostati con `setLocation` sul disco media;
-- liberati ~31 GB sul root (ora ~36 GB liberi).
+- `/dev/sda1` formattato **ext4**, label `HDD_WD_1`, montato su `/mnt/HDD_WD_1` (1,8 TB, ~1,7 TB liberi);
+- qBittorrent `save_path` → `/mnt/HDD_WD_1/downloads`;
+- categoria `radarr` → `/mnt/HDD_WD_1/downloads/movies`;
+- categoria `tv-sonarr` → `/mnt/HDD_WD_1/downloads/tv`;
+- 22 torrent film + 12 serie spostati sul nuovo HDD con `setLocation`;
+- root libero: ~36 GB; `/mnt/media` libero: ~4,7 TB.
 
 Verifica:
 
 ```bash
 curl -s http://127.0.0.1:8080/api/v2/app/preferences |
   python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["save_path"], d["temp_path_enabled"])'
-df -h / /mnt/media
+curl -s http://127.0.0.1:8080/api/v2/torrents/categories |
+  python3 -c 'import sys,json;d=json.load(sys.stdin);print({k:v["savePath"] for k,v in d.items()})'
+findmnt /mnt/HDD_WD_1
+df -h / /mnt/media /mnt/HDD_WD_1
 ```
 
-I download futuri non riempiranno più `/`.
+### Plex
+
+Plex è stato **fermato e disabilitato** (non usato). Le librerie `FILM_T` e `TV Shows_T` puntavano al vecchio HDD_WD_1 e non sono più disponibili; la copia pre-formattazione resta in `/mnt/backup/current/HDD_WD_1` (1,3 TB).
+
+Rimozione futura:
+
+```bash
+sudo systemctl disable --now plexmediaserver
+sudo snap remove plexmediaserver
+# dati: /var/lib/plexmediaserver e /var/snap/plexmediaserver
+```
 
 ## Test eseguito
 
@@ -275,6 +297,9 @@ deploy/seerr/docker-compose.yml
 deploy/seerr/.env.example
 scripts/backup-configs.sh
 scripts/backup-post-change.sh
+scripts/backup-storage.sh
+scripts/setup-hdd-wd1.sh
+scripts/update-system-md.py
 scripts/setup-jellyfin-seerr-user.py
 scripts/setup-seerr.py
 scripts/configure-je.py

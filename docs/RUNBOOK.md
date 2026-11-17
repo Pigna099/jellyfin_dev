@@ -104,25 +104,36 @@ Note:
 
 ## Storage download (qBittorrent)
 
-Il root era pieno perché qBittorrent salvava in `/home/dante/Downloads/temp`. Ora:
+HDD dedicato: `/dev/sda1` (1,8 T) → ext4, label `HDD_WD_1`, mount `/mnt/HDD_WD_1`.
+Cartelle: `downloads/movies`, `downloads/tv`, `downloads/incomplete` (`dante:media 2775`).
 
 ```bash
+findmnt /mnt/HDD_WD_1
 curl -s http://127.0.0.1:8080/api/v2/app/preferences |
   python3 -c 'import sys,json;d=json.load(sys.stdin);print(d["save_path"], d["temp_path_enabled"])'
-# atteso: /mnt/media/downloads False
+# atteso: /mnt/HDD_WD_1/downloads False
+curl -s http://127.0.0.1:8080/api/v2/torrents/categories |
+  python3 -c 'import sys,json;d=json.load(sys.stdin);print({k:v["savePath"] for k,v in d.items()})'
+# atteso: radarr -> /mnt/HDD_WD_1/downloads/movies
+#         tv-sonarr -> /mnt/HDD_WD_1/downloads/tv
 ```
 
-Categoria `radarr`: path relativo `movies` → `/mnt/media/downloads/movies`.
 Per spostare torrent esistenti:
 
 ```bash
-HASHES=$(curl -s 'http://127.0.0.1:8080/api/v2/torrents/info?category=radarr' |
-  python3 -c 'import sys,json;[print(t["hash"]) for t in json.load(sys.stdin) if t.get("save_path","").startswith("/home/dante")]')
+HASHES=$(curl -s 'http://127.0.0.1:8080/api/v2/torrents/info' |
+  python3 -c 'import sys,json;[print(t["hash"]) for t in json.load(sys.stdin) if t.get("category")=="radarr" and not t.get("save_path","").startswith("/mnt/HDD_WD_1")]')
 for H in $HASHES; do
-  curl -s -X POST -d "hashes=$H&location=/mnt/media/downloads/movies" \
+  curl -s -X POST -d "hashes=$H&location=/mnt/HDD_WD_1/downloads/movies" \
     http://127.0.0.1:8080/api/v2/torrents/setLocation
 done
 ```
+
+Per le serie usare `category=tv-sonarr` e `location=/mnt/HDD_WD_1/downloads/tv`.
+
+Formattazione/mount (solo se serve rifare): script `scripts/setup-hdd-wd1.sh`, da eseguire nel namespace host con Jellyfin/Plex fermati. Il vecchio mount NTFS `/mnt/media/HDD_WD_1` è stato rimosso.
+
+Plex è **fermo e disabilitato**. Le librerie `FILM_T` e `TV Shows_T` puntavano al vecchio HDD_WD_1 e non sono più disponibili; la copia pre-formattazione è in `/mnt/backup/current/HDD_WD_1`.
 
 Se `/` torna pieno: controllare `df -h /`, `du -sh /home/dante/Downloads/temp/*`, poi svuotare Docker build cache e journal:
 
@@ -152,13 +163,16 @@ curl -s -H "X-Api-Key: $KEY" 'http://127.0.0.1:5056/api/v1/request?take=5' |
 Pre: `/mnt/backup/config-backups/2026-11-17_1640`
 Post-backend: `/mnt/backup/config-backups/2026-11-17_1725-post-request`
 Post-UI: `/mnt/backup/config-backups/2026-11-17_1745-post-request`
-Post-UI minima (finale): `/mnt/backup/config-backups/2026-11-17_1826-post-request`
+Post-UI minima: `/mnt/backup/config-backups/2026-11-17_1826-post-request`
+Full pre-HDD: `/mnt/backup/2026-11-17_1905`
+Storage post-HDD: `/mnt/backup/config-backups/2026-11-17_1925-hdd`
 
 Verifica:
 
 ```bash
-D=/mnt/backup/config-backups/2026-11-17_1826-post-request
-cd "$D" && sha256sum -c SHA256SUMS
+for D in /mnt/backup/config-backups/2026-11-17_1826-post-request /mnt/backup/2026-11-17_1905 /mnt/backup/config-backups/2026-11-17_1925-hdd; do
+  echo "== $D"; (cd "$D" && sha256sum -c SHA256SUMS | tail -3)
+done
 ```
 
 Ripristino Jellyfin (esempio):
