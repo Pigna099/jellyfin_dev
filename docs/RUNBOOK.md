@@ -131,7 +131,7 @@ done
 
 Per le serie usare `category=tv-sonarr` e `location=/mnt/HDD_WD_1/downloads/series`.
 
-Formattazione/mount (solo se serve rifare): script `scripts/setup-hdd-wd1.sh`, da eseguire nel namespace host con Jellyfin/Plex fermati. Il vecchio mount NTFS `/mnt/media/HDD_WD_1` è stato rimosso.
+Formattazione/mount (solo se serve rifare): operazione manuale distruttiva. Fermare Jellyfin/Plex, smontare il disco, `mkfs.ext4 -F -L HDD_WD_1 /dev/sda1`, aggiornare `/etc/fstab` con il nuovo UUID, montare su `/mnt/HDD_WD_1` e ricreare `downloads/movies` + `downloads/series` (`dante:media 2775`). Il vecchio mount NTFS `/mnt/media/HDD_WD_1` è stato rimosso.
 
 Plex è **fermo e disabilitato**. Le librerie `FILM_T` e `TV Shows_T` puntavano al vecchio HDD_WD_1 e non sono più disponibili; la copia pre-formattazione è in `/mnt/backup/current/HDD_WD_1`.
 

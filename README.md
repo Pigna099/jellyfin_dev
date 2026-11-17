@@ -298,7 +298,6 @@ deploy/seerr/.env.example
 scripts/backup-configs.sh
 scripts/backup-post-change.sh
 scripts/backup-storage.sh
-scripts/setup-hdd-wd1.sh
 scripts/update-system-md.py
 scripts/setup-jellyfin-seerr-user.py
 scripts/setup-seerr.py
