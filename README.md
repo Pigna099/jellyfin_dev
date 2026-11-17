@@ -16,7 +16,7 @@ Implementazione attiva sul server `192.168.1.30` (dante-HP):
 
 ```text
 Browser / app Jellyfin
-        │  tab "Richiedi film" (Custom Tabs → Jellyseerr Bridge)
+        │  tab "Richiedi film" (UI minima Custom Tabs → API Jellyseerr Bridge)
         │  + risultati Seerr nella ricerca Jellyfin (Jellyfin Enhanced)
         ▼
 Jellyfin 10.11.11
@@ -31,15 +31,15 @@ Seerr 3.5.2  ──►  Radarr 7878  ──►  Prowlarr 9696  ──►  qBitto
                                                      scan Jellyfin → film visibile
 ```
 
-La richiesta viene **auto-approvata** per gli utenti della famiglia; Radarr aggiunge il film con TMDB ID, root folder e profilo qualità, poi avvia la ricerca. Seerr mostra lo stato (in coda, in download, disponibile) e la pagina **Richiedi film** mostra i badge Disponibile/Richiesto.
+La richiesta viene **auto-approvata** per gli utenti della famiglia; Radarr aggiunge il film con TMDB ID, root folder e profilo qualità, poi avvia la ricerca. La pagina **Richiedi film** mostra solo ricerca, risultati e pulsante Richiedi; Seerr gestisce lo stato (in coda, in download, disponibile).
 
 ## Cosa è stato installato
 
 | Componente | Dove | Note |
 |---|---|---|
 | Seerr | `/srv/seerr/config` + `/home/dante/docker/seerr` | compose in `deploy/seerr/docker-compose.yml` |
-| Jellyseerr Bridge | `/srv/jellyfin/config/plugins/Jellyseerr Bridge_0.1.0.5` | pagina richieste con ricerca/categorie |
-| Custom Tabs + File Transformation | `/srv/jellyfin/config/plugins/` | tab **Richiedi film** e CSS/etichette italiane |
+| Jellyseerr Bridge | `/srv/jellyfin/config/plugins/Jellyseerr Bridge_0.1.0.5` | backend ricerca/richiesta (la UI è custom) |
+| Custom Tabs + File Transformation | `/srv/jellyfin/config/plugins/` | tab **Richiedi film** con UI minima (barra di ricerca) |
 | Jellyfin Enhanced | `/srv/jellyfin/config/plugins/Jellyfin Enhanced_12.16.0.0` | ricerca Seerr; tab Recommendations/Downloads disattivate |
 | Utente Jellyfin `seerr` | Jellyfin | admin nascosto, password casuale in `.env`; owner di Seerr |
 | Utenti famiglia | Seerr | 7 utenti Jellyfin importati e collegati, permessi richiesta + auto-approve |
@@ -60,15 +60,17 @@ La richiesta viene **auto-approvata** per gli utenti della famiglia; Radarr aggi
 
 ## Uso
 
-1. Apri Jellyfin da browser o app che carica la web UI del server.
-2. In alto compare la tab **Richiedi film** (dopo Home/Favourites).
-3. Cerca un titolo nella barra in alto, oppure sfoglia **Di tendenza / Film / Prossime uscite / Serie TV / Prossime serie**.
-4. Apri la scheda del film e premi **Richiedi** (per le serie: **Richiedi serie**).
-5. La pagina mostra subito **Richiesto**; Seerr e Radarr lavorano in background.
-6. Per lo stato completo: `http://192.168.1.30:5056` (Seerr) oppure la ricerca Jellyfin, che mostra i risultati Seerr con **Discover on Seerr**.
+1. Apri Jellyfin: si apre su **Home** (la pagina richieste non si apre da sola).
+2. Clicca la tab **Richiedi film** in alto.
+3. Scrivi il titolo nella barra di ricerca e premi **Cerca**.
+4. Nei risultati premi **Richiedi** accanto al film.
+5. Compare **Richiesta inviata a Radarr**; Seerr/Radarr lavorano in background.
+6. Per lo stato completo: `http://192.168.1.30:5056` (Seerr) oppure la ricerca Jellyfin.
 7. Quando il film è importato e scansionato, appare nella libreria **Film** di Jellyfin.
 
-> Le tab **Seerr Recommendations** e **Requests/Downloads** di Jellyfin Enhanced sono state **nascoste**: la pagina primaria è ora **Richiedi film**.
+La pagina contiene solo: titolo, barra di ricerca, pulsante Cerca, risultati e pulsante Richiedi. Nessuna categoria, filtro, classifica o sezione download.
+
+> Le tab **Seerr Recommendations** e **Requests/Downloads** di Jellyfin Enhanced sono **nascoste**. La tab **Richiedi film** si apre solo quando la clicchi; su Home non compare.
 
 ## Installazione da zero
 
@@ -156,12 +158,13 @@ python3 configure-request-ui.py
 Lo script:
 
 - configura Seerr Bridge su `http://127.0.0.1:5056` con API key server-side;
-- crea la tab **Richiedi film** con iframe della pagina Seerr Bridge, CSS a blocchi solidi, testi italiani e suggerimento d'uso;
+- crea la tab **Richiedi film** con una UI minima: barra di ricerca, risultati film, pulsante **Richiedi** (niente iframe, categorie o filtri);
+- fa aprire Jellyfin su **Home** e mostra la pagina richieste solo al click sulla tab;
 - nasconde le tab JE **Seerr Recommendations** e **Requests/Downloads**;
 - mantiene la ricerca Seerr nei risultati Jellyfin;
 - disattiva le righe Similar/Recommended di JE.
 
-Impostazioni principali: URL Seerr, API key, auto-approve famiglia, niente 4K. La pagina **Richiedi film** è la landing per le richieste.
+Impostazioni principali: URL Seerr, API key, auto-approve famiglia, niente 4K.
 
 ## Backup
 
@@ -170,6 +173,7 @@ Impostazioni principali: URL Seerr, API key, auto-approve famiglia, niente 4K. L
 | Pre-intervento | `/mnt/backup/config-backups/2026-11-17_1640` | Jellyfin completo (config+metadata+DB), Radarr, Sonarr, Prowlarr, Lidarr, Bazarr, qBittorrent, Nginx, Let's Encrypt, WireGuard, systemd, compose Pignify |
 | Post-backend | `/mnt/backup/config-backups/2026-11-17_1725-post-request` | Seerr config+DB, plugin/config Jellyfin Enhanced, DB Jellyfin, config Jellyfin, compose/.env Seerr |
 | Post-UI | `/mnt/backup/config-backups/2026-11-17_1745-post-request` | Seerr config+DB, tutti i plugin Jellyfin (JE, Bridge, Custom Tabs, File Transformation), DB/config Jellyfin, compose/.env |
+| Post-UI minima (finale) | `/mnt/backup/config-backups/2026-11-17_1826-post-request` | Seerr config+DB, plugin/DB/config Jellyfin, compose/.env |
 
 Tutti hanno `SHA256SUMS` verificato e DB con `PRAGMA integrity_check = ok`.
 
@@ -179,15 +183,15 @@ Per un backup futuro completo usare `scripts/backup-configs.sh` (include anche S
 
 Test end-to-end reale, poi ripulito:
 
-1. Aperta Jellyfin (URL pubblico `https://genossenfilm.ddns.net`), tab **Richiedi film**.
-2. Cercato **Dune** e verificati i risultati; aperto **Odissea** (TMDB `1368337`, non presente in libreria).
-3. Premuto **Richiedi**.
-4. Seerr: richiesta creata e auto-approvata (`status 2`).
-5. Radarr: film aggiunto con `qualityProfileId=8`, root `/mnt/media/movies`, `monitored=true`, ricerca avviata.
-6. Radarr/qBittorrent: trovato e avviato il download `Odissea (2026) 2160p UHD BluRay ...`.
-7. Pulizia: richiesta Seerr eliminata, film Radarr eliminato, torrent e file rimossi. Nessun residuo.
+1. Aperta Jellyfin (URL pubblico `https://genossenfilm.ddns.net`): si apre su **Home**, la pagina richieste è nascosta.
+2. Cliccata la tab **Richiedi film**; verificata la UI minima (una barra, un pulsante).
+3. Cercato **Dune**; risultati con stato **Disponibile / Non disponibile**.
+4. Premuto **Richiedi** su **Dune - Parte tre** (TMDB `1170608`).
+5. Seerr: richiesta creata e auto-approvata (`status 2`).
+6. Radarr: film aggiunto con `qualityProfileId=8`, root `/mnt/media/movies`, `monitored=true`.
+7. Pulizia: richiesta Seerr e film Radarr eliminati; nessun torrent/file residuo.
 
-La UI è stata verificata anche per: ricerca con debounce, cambio categoria, stati **Disponibile / Non disponibile / Richiesto**, blocco/solid background e layout responsive.
+Verificato anche: click su Home nasconde la pagina richieste; reload non riapre la pagina richieste; ricerca e pulsante funzionano da URL pubblico.
 
 Stato sincronizzazione Seerr: **506 media** (Film + Serie TV) dopo il full sync.
 
@@ -220,15 +224,17 @@ Stato sincronizzazione Seerr: **506 media** (Film + Serie TV) dopo il full sync.
 
 ## UI
 
-La UI live è **“Richiedi film”**: Custom Tabs + Jellyseerr Bridge, con:
+La UI live è **“Richiedi film”**, volutamente minimale:
 
-- barra di ricerca e categorie (Di tendenza, Film, Prossime uscite, Serie TV, Prossime serie);
-- blocchi solidi per ricerca/categorie/griglia e card `#202020`;
-- badge **Disponibile / Non disponibile / Richiesto**;
-- pulsanti **Richiedi / Richiedi serie**;
-- banner informativo in italiano.
+- una barra di ricerca + pulsante **Cerca**;
+- risultati film con poster, titolo, anno e stato;
+- un pulsante **Richiedi** per ogni film richiedibile;
+- messaggio di conferma “Richiesta inviata a Radarr”;
+- blocchi solidi (`#181818` pannello, `#202020` risultati) su sfondo `#0f0f0f`.
 
-Le tab **Seerr Recommendations** e **Requests/Downloads** di Jellyfin Enhanced sono state rimosse dalla navigazione.
+Non ci sono categorie, filtri, ordinamenti, classifiche, sezione download o iframe. La tab si apre solo al click; Jellyfin parte sempre da **Home**.
+
+Le tab **Seerr Recommendations** e **Requests/Downloads** di Jellyfin Enhanced sono rimosse dalla navigazione.
 
 In `design/` c'è anche lo studio UI alternativo **“Richiedi un film”** (mockup HTML autonomo, tema Jellyfin, ricerca, card, filtri, dettaglio, “Le mie richieste”) usato per valutare le due direzioni:
 

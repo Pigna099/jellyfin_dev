@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""Configura la UI richieste: Seerr Bridge + Custom Tabs, nasconde JE extra."""
+"""Configura la UI minima 'Richiedi film' e nasconde le parti extra di JE.
+
+La UI usa il backend di Jellyseerr Bridge (stessa origine Jellyfin) e mostra
+solo: barra di ricerca, risultati film, pulsante Richiedi.
+"""
 import json
-import re
 import sqlite3
 import urllib.error
 import urllib.request
@@ -51,152 +54,348 @@ def call(method, path, payload=None):
 
 
 CUSTOM_TABS_HTML = r"""
+<script>
+(function () {
+  // Il content div creato da Custom Tabs in alcuni casi non ha le classi
+  // Jellyfin: senza queste la pagina resterebbe visibile anche su Home.
+  var el = document.getElementById('customTab_0');
+  var userOpened = false;
+  if (el) {
+    el.classList.add('tabContent', 'pageTabContent');
+    var btn = document.getElementById('customTabButton_0');
+    if (btn) btn.addEventListener('click', function () {
+      userOpened = true;
+      el.classList.add('request-opened');
+    });
+  }
+  // La tab custom è l'ultima: Jellyfin può selezionarla all'avvio.
+  // Forziamo Home al primo caricamento; la tab si apre solo su click.
+  var tries = 0;
+  function goHome() {
+    if (userOpened) return;
+    var home = document.querySelector('.emby-tabs-slider .emby-tab-button[data-index="0"]');
+    if (home && !home.classList.contains('emby-tab-button-active')) {
+      home.click();
+      return;
+    }
+    if (tries++ < 10) setTimeout(goHome, 150);
+  }
+  setTimeout(goHome, 120);
+})();
+</script>
 <style>
-  .requestPageFix {
-    position: fixed !important;
-    top: 80px !important;
-    left: 0 !important;
-    width: 100vw !important;
-    height: calc(100vh - 80px) !important;
-    overflow: hidden !important;
-    z-index: 10 !important;
-    background: #0f0f0f !important;
+  #customTab_0 { display: none !important; }
+  #customTab_0.request-opened.is-active { display: block !important; }
+  #request-app {
+    box-sizing: border-box;
+    min-height: calc(100vh - 80px);
+    padding: 2.5rem 1rem 4rem;
+    background: #0f0f0f;
+    color: #fff;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   }
-  .requestIframe {
-    width: 100% !important;
-    height: 100% !important;
-    border: 0 !important;
-    background: #0f0f0f !important;
-    display: block !important;
+  #request-app * { box-sizing: border-box; }
+  .request-panel {
+    width: 100%;
+    max-width: 820px;
+    margin: 0 auto;
+    background: #181818;
+    border: 1px solid #2b2b2b;
+    border-radius: 14px;
+    padding: 1.6rem;
   }
-  @media (min-width: 600px) and (max-width: 999px) {
-    .requestPageFix { top: 150px !important; height: calc(100vh - 150px) !important; }
+  .request-panel h1 {
+    margin: 0 0 .35rem;
+    font-size: 1.7rem;
+    line-height: 1.2;
   }
-  @media (max-width: 599px) {
-    .requestPageFix { top: 145px !important; height: calc(100vh - 145px) !important; }
+  .request-sub {
+    margin: 0 0 1.3rem;
+    color: #b8b8b8;
+    font-size: .98rem;
   }
-  .skinHeader { z-index: 1000 !important; }
-  .skinHeader::after { pointer-events: none !important; }
+  .request-form {
+    display: flex;
+    gap: .6rem;
+  }
+  .request-form input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 2.9rem;
+    padding: 0 .9rem;
+    border: 1px solid #3a3a3a;
+    border-radius: 9px;
+    background: #101010;
+    color: #fff;
+    font: inherit;
+    outline: none;
+  }
+  .request-form input:focus {
+    border-color: #00a4dc;
+    box-shadow: 0 0 0 2px rgba(0, 164, 220, .18);
+  }
+  .request-form button,
+  .request-result button {
+    height: 2.9rem;
+    padding: 0 1.15rem;
+    border: 0;
+    border-radius: 9px;
+    background: #00a4dc;
+    color: #001018;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .request-form button:hover,
+  .request-result button:hover { background: #25b6e8; }
+  .request-form button:disabled,
+  .request-result button:disabled {
+    background: #2a2a2a;
+    color: #9a9a9a;
+    cursor: default;
+  }
+  .request-message {
+    min-height: 1.4rem;
+    margin: 1rem 0 0;
+    color: #b8b8b8;
+    font-size: .92rem;
+  }
+  .request-message.ok { color: #7ee2a8; }
+  .request-message.error { color: #ff8f8f; }
+  .request-results {
+    display: grid;
+    gap: .7rem;
+    margin-top: 1rem;
+  }
+  .request-result {
+    display: flex;
+    align-items: center;
+    gap: .9rem;
+    padding: .75rem;
+    background: #202020;
+    border: 1px solid #2e2e2e;
+    border-radius: 10px;
+  }
+  .request-poster {
+    display: block;
+    width: 58px;
+    height: 87px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: #2a2a2a;
+    flex: 0 0 auto;
+  }
+  .request-poster-empty { border: 1px solid #333; }
+  .request-info { flex: 1 1 auto; min-width: 0; }
+  .request-title {
+    font-weight: 700;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .request-title span { color: #9a9a9a; font-weight: 500; }
+  .request-status {
+    margin-top: .2rem;
+    color: #9a9a9a;
+    font-size: .86rem;
+  }
+  .request-status.s5 { color: #7ee2a8; }
+  .request-status.s2,
+  .request-status.s3 { color: #ffd479; }
+  .request-action { flex: 0 0 auto; }
+  .request-done { color: #9a9a9a; font-size: .9rem; }
+  .request-empty {
+    padding: 1rem;
+    background: #202020;
+    border: 1px solid #2e2e2e;
+    border-radius: 10px;
+    color: #9a9a9a;
+  }
+  @media (max-width: 640px) {
+    #request-app { padding-top: 1.4rem; }
+    .request-panel { padding: 1.1rem; }
+    .request-form { flex-direction: column; }
+    .request-form button { width: 100%; }
+    .request-result { align-items: flex-start; }
+    .request-action button { padding: 0 .8rem; }
+  }
 </style>
-<div class="requestPageFix">
-  <iframe id="pignifyRequestFrame" class="requestIframe" src="/JellyseerrBridge/Page"></iframe>
+<div id="request-app">
+  <div class="request-panel">
+    <h1>Richiedi un film</h1>
+    <p class="request-sub">Cerca un film e invia la richiesta a Radarr.</p>
+    <form class="request-form" id="request-form" autocomplete="off">
+      <input id="request-query" type="search" placeholder="Titolo del film..." aria-label="Titolo del film" />
+      <button id="request-search" type="submit">Cerca</button>
+    </form>
+    <div class="request-message" id="request-message" role="status" aria-live="polite"></div>
+    <div class="request-results" id="request-results"></div>
+  </div>
 </div>
 <script>
 (function () {
-  var frame = document.getElementById('pignifyRequestFrame');
-  function decorate() {
+  var app = document.getElementById('request-app');
+  if (!app || app.dataset.ready === '1') return;
+  app.dataset.ready = '1';
+
+  var form = document.getElementById('request-form');
+  var input = document.getElementById('request-query');
+  var results = document.getElementById('request-results');
+  var message = document.getElementById('request-message');
+  var searchButton = document.getElementById('request-search');
+
+  function token() {
     try {
-      var d = frame.contentDocument;
-      if (!d || !d.body) return;
-      if (!d.getElementById('pignify-request-style')) {
-        var s = d.createElement('style');
-        s.id = 'pignify-request-style';
-        s.textContent = [
-          'body{background:#0f0f0f!important;}',
-          '.shell{gap:1.1rem!important;}',
-          '.top,.tabs,.filter-panel,.sort-panel,.grid,.detail,.footer,.message{background:#181818!important;border:1px solid #2b2b2b!important;border-radius:12px!important;padding:1rem!important;}',
-          '.page-tabs{display:none!important;}',
-          'h1{font-size:1.9rem!important;margin:0!important;}',
-          '.grid{background:#141414!important;}',
-          '.card{background:#202020!important;border:1px solid #2e2e2e!important;border-radius:10px!important;}',
-          '.card-body,.card-actions{background:#202020!important;}',
-          '.card-link:hover .poster{opacity:.88!important;}',
-          '.pignify-help{max-width:112rem;margin:0 auto;padding:1rem clamp(1rem,3vw,2.5rem) 0;display:flex;flex-direction:column;gap:.25rem;color:#fff;font-family:system-ui,sans-serif;}',
-          '.pignify-help strong{font-size:1.15rem;}',
-          '.pignify-help span{color:#b8b8b8;font-size:.95rem;}',
-          '.pignify-help b{color:#00a4dc;}'
-        ].join('');
-        d.head.appendChild(s);
-      }
-      if (!d.getElementById('pignify-help')) {
-        var b = d.createElement('div');
-        b.id = 'pignify-help';
-        b.className = 'pignify-help';
-        b.innerHTML = '<strong>Richiedi un film</strong><span>Cerca un titolo, apri la scheda e premi <b>Request</b>. La richiesta viene inviata subito a Radarr.</span>';
-        d.body.insertBefore(b, d.body.firstChild);
-      }
-      var input = d.querySelector('input[type="search"], input.search');
-      if (input) input.placeholder = 'Cerca un film o una serie...';
-
-      var h = d.querySelector('h1');
-      if (h) h.textContent = 'Cerca un film';
-
-      var map = {
-        'Trending': 'Di tendenza',
-        'Movies': 'Film',
-        'Upcoming Movies': 'Prossime uscite',
-        'Shows': 'Serie TV',
-        'Upcoming Shows': 'Prossime serie',
-        'Filters': 'Filtri',
-        'Sort': 'Ordina',
-        'Load more': 'Carica altri',
-        'Request Show': 'Richiedi serie',
-        'Request': 'Richiedi',
-        'Not Available': 'Non disponibile',
-        'Available': 'Disponibile',
-        'Requested': 'Richiesto',
-        'Pending Approval': 'In approvazione',
-        'Processing': 'In download',
-        'Partially Available': 'Parzialmente disponibile',
-        'Search and discover media from Jellyseerr without leaving Jellyfin.': 'Cerca un film o una serie e invia la richiesta senza uscire da Jellyfin.'
-      };
-      function translate(root) {
-        try {
-          var w = d.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-          var n;
-          while ((n = w.nextNode())) {
-            var t = n.textContent.trim();
-            if (map[t]) n.textContent = n.textContent.replace(t, map[t]);
-            else if (t.length < 80) {
-              n.textContent = n.textContent
-                .replace('Not Available', 'Non disponibile')
-                .replace('Partially Available', 'Parzialmente disponibile')
-                .replace('Pending Approval', 'In approvazione')
-                .replace('Requested', 'Richiesto')
-                .replace('Available', 'Disponibile')
-                .replace('Processing', 'In download');
-            }
-          }
-        } catch (e) {}
-      }
-      function translateStatuses() {
-        try {
-          d.querySelectorAll('.status').forEach(function (el) {
-            var t = el.textContent.trim();
-            t = t.replace(/^movie/i, 'Film').replace(/^(tv|show)/i, 'Serie');
-            t = t.replace(/not available/i, 'Non disponibile')
-              .replace(/partially available/i, 'Parzialmente disponibile')
-              .replace(/pending approval/i, 'In approvazione')
-              .replace(/requested/i, 'Richiesto')
-              .replace(/available/i, 'Disponibile')
-              .replace(/processing/i, 'In download');
-            if (el.textContent !== t) el.textContent = t;
-          });
-        } catch (e) {}
-      }
-      function all() { translate(d.body); translateStatuses(); }
-      all();
-      setTimeout(all, 800);
-      try {
-        d.addEventListener('click', function (e) {
-          if (e.target.closest('.action, .tab, .more, .filter-toggle, .apply, .clear, .page-tab')) {
-            setTimeout(all, 500);
-            setTimeout(all, 1200);
-          }
-        }, true);
-        d.addEventListener('input', function () { setTimeout(all, 900); }, true);
-      } catch (e) {}
-    } catch (e) {}
+      var raw = localStorage.getItem('jellyfin_credentials');
+      var data = raw ? JSON.parse(raw) : null;
+      var servers = data && data.Servers ? data.Servers : [];
+      var server = servers.find(function (s) { return s && s.AccessToken; }) || servers[0];
+      return server && server.AccessToken ? server.AccessToken : '';
+    } catch (e) { return ''; }
   }
-  frame.addEventListener('load', decorate);
-  if (frame.contentDocument && frame.contentDocument.readyState === 'complete') decorate();
+
+  function authHeaders() {
+    var t = token();
+    return {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      'X-Emby-Token': t,
+      'Authorization': 'MediaBrowser Client="Jellyfin Film Request", Device="Web", DeviceId="pignify-request", Version="1.0", Token="' + t + '"'
+    };
+  }
+
+  function setMessage(text, kind) {
+    message.textContent = text || '';
+    message.className = 'request-message' + (kind ? ' ' + kind : '');
+  }
+
+  function esc(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+
+  function statusOf(item) {
+    return item && item.mediaInfo && item.mediaInfo.status ? item.mediaInfo.status : 0;
+  }
+
+  function statusLabel(status) {
+    if (status === 5) return 'Disponibile';
+    if (status === 4) return 'Parzialmente disponibile';
+    if (status === 3) return 'In download';
+    if (status === 2) return 'In approvazione';
+    if (status === 6) return 'Eliminato';
+    return 'Non disponibile';
+  }
+
+  function canRequest(status) {
+    return status !== 5 && status !== 4 && status !== 3 && status !== 2;
+  }
+
+  function render(items) {
+    if (!items.length) {
+      results.innerHTML = '<div class="request-empty">Nessun film trovato.</div>';
+      return;
+    }
+    results.innerHTML = items.map(function (item) {
+      var status = statusOf(item);
+      var year = (item.releaseDate || item.firstAirDate || '').slice(0, 4);
+      var poster = item.posterPath ? 'https://image.tmdb.org/t/p/w200' + item.posterPath : '';
+      var title = item.title || item.name || 'Senza titolo';
+      var requestable = canRequest(status);
+      return '<div class="request-result">' +
+        (poster
+          ? '<img class="request-poster" src="' + esc(poster) + '" alt="" loading="lazy">'
+          : '<div class="request-poster request-poster-empty"></div>') +
+        '<div class="request-info">' +
+          '<div class="request-title">' + esc(title) + (year ? ' <span>(' + esc(year) + ')</span>' : '') + '</div>' +
+          '<div class="request-status s' + status + '">' + statusLabel(status) + '</div>' +
+        '</div>' +
+        '<div class="request-action">' +
+          (requestable
+            ? '<button type="button" data-id="' + esc(item.id) + '" data-title="' + esc(title) + '">Richiedi</button>'
+            : '<span class="request-done">' + statusLabel(status) + '</span>') +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    Array.prototype.forEach.call(results.querySelectorAll('button[data-id]'), function (button) {
+      button.addEventListener('click', function () { submit(button); });
+    });
+  }
+
+  function search(query) {
+    if (!token()) {
+      setMessage('Sessione non valida: ricarica Jellyfin e riprova.', 'error');
+      return;
+    }
+    setMessage('Ricerca in corso...');
+    results.innerHTML = '';
+    searchButton.disabled = true;
+    fetch('/JellyseerrBridge/Search?query=' + encodeURIComponent(query) + '&page=1', {
+      headers: authHeaders(),
+      cache: 'no-store'
+    }).then(function (response) {
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.json();
+    }).then(function (data) {
+      var movies = (data.results || []).filter(function (item) {
+        return item && item.mediaType === 'movie' && item.id;
+      });
+      setMessage(movies.length ? movies.length + ' risultati' : 'Nessun film trovato.');
+      render(movies);
+    }).catch(function (error) {
+      setMessage('Errore nella ricerca: ' + error.message, 'error');
+    }).finally(function () {
+      searchButton.disabled = false;
+    });
+  }
+
+  function submit(button) {
+    var id = Number(button.getAttribute('data-id'));
+    var title = button.getAttribute('data-title') || 'film';
+    if (!id) return;
+    button.disabled = true;
+    button.textContent = 'Invio...';
+    setMessage('Invio richiesta per ' + title + '...');
+    fetch('/JellyseerrBridge/Request', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ mediaType: 'movie', mediaId: id, is4k: false })
+    }).then(function (response) {
+      if (!response.ok && response.status !== 202) {
+        return response.text().then(function (text) {
+          throw new Error(text || ('HTTP ' + response.status));
+        });
+      }
+      button.textContent = 'Inviata';
+      setMessage('Richiesta inviata a Radarr: ' + title + '.', 'ok');
+    }).catch(function (error) {
+      button.disabled = false;
+      button.textContent = 'Riprova';
+      setMessage('Errore nella richiesta: ' + error.message, 'error');
+    });
+  }
+
+  form.addEventListener('submit', function (event) {
+    event.preventDefault();
+    var query = input.value.trim();
+    if (!query) {
+      setMessage('Scrivi il titolo di un film.', 'error');
+      input.focus();
+      return;
+    }
+    search(query);
+  });
+
+  input.focus();
 })();
 </script>
 """
 
 
 def main():
-    # 1. Seerr Bridge
+    # 1. Backend richieste: Jellyseerr Bridge.
     status, cfg = call("GET", f"/Plugins/{SEERR_BRIDGE}/Configuration")
     if status != 200:
         raise SystemExit(f"Seerr Bridge config: {status} {cfg}")
@@ -214,7 +413,7 @@ def main():
         raise SystemExit(f"Seerr Bridge save: {status} {out}")
     print("Seerr Bridge configurato")
 
-    # 2. Custom Tabs: un solo tab "Richiedi film"
+    # 2. Tab minimale "Richiedi film": solo ricerca + risultati + Richiedi.
     status, tabs = call("GET", f"/Plugins/{CUSTOM_TABS}/Configuration")
     if status != 200:
         raise SystemExit(f"Custom Tabs config: {status} {tabs}")
@@ -222,9 +421,9 @@ def main():
     status, out = call("POST", f"/Plugins/{CUSTOM_TABS}/Configuration", tabs)
     if status not in (200, 204):
         raise SystemExit(f"Custom Tabs save: {status} {out}")
-    print("Custom Tabs configurato: Richiedi film")
+    print("Custom Tabs configurato: Richiedi film (UI minima)")
 
-    # 3. JE: nascondi Recommendations e pagina Downloads/Requests
+    # 3. JE: niente recommendations/downloads; resta solo la ricerca Seerr.
     status, je = call("GET", f"/Plugins/{JE}/Configuration")
     if status != 200:
         raise SystemExit(f"JE config: {status} {je}")

@@ -75,25 +75,28 @@ Dopo un aggiornamento di Jellyfin:
 
 La tab è composta da:
 
-- **Custom Tabs** (tab + HTML/CSS/JS) → `/srv/jellyfin/config/plugins/Custom Tabs_0.3.3.0`;
+- **Custom Tabs** (tab + HTML/CSS/JS con la UI minima) → `/srv/jellyfin/config/plugins/Custom Tabs_0.3.3.0`;
 - **File Transformation** → prerequisito;
-- **Jellyseerr Bridge** → pagina `/JellyseerrBridge/Page` e proxy API server-side.
+- **Jellyseerr Bridge** → solo backend (search/request server-side); la sua pagina non viene usata.
+
+UI: una barra di ricerca, pulsante **Cerca**, risultati film e pulsante **Richiedi**. Nessuna categoria/filtro/download.
 
 Configurazione:
 
 - Custom Tabs: `/Plugins/fbacd0b6-fd46-4a05-b0a4-2045d6a135b0/Configuration`
 - Seerr Bridge: `/Plugins/d2fcf9c8-c3c7-47e8-9dd6-8de9867e36bb/Configuration`
 
-Per riapplicare CSS, banner e traduzioni:
+Per riapplicare la UI:
 
 ```bash
 python3 /home/dante/docker/seerr/configure-request-ui.py
 ```
 
-Per cambiare il contenuto della tab, modificare `CUSTOM_TABS_HTML` in `scripts/configure-request-ui.py` e rilanciare. Dopo una modifica potrebbe servire un **hard reload** (`Cmd+Shift+R`), perché Custom Tabs carica la config una volta per pagina.
+Per cambiare il contenuto della tab, modificare `CUSTOM_TABS_HTML` in `scripts/configure-request-ui.py` e rilanciare. Dopo una modifica serve un **hard reload** (`Cmd+Shift+R`), perché Custom Tabs carica la config una volta per pagina.
 
 Note:
 
+- la tab deve restare **nascosta su Home**: il content div `#customTab_0` deve avere le classi `tabContent pageTabContent`; lo script nella UI le aggiunge e forza Home al primo caricamento. Se la pagina richieste compare subito, fare hard reload o verificare che lo script sia presente nel `ContentHtml`;
 - se la tab non compare, verificare che i tre plugin siano **Active** e che la config Custom Tabs abbia un elemento `Title="Richiedi film"`;
 - la tab non compare sui client TV nativi (è web UI);
 - le richieste della pagina sono attribuite all'account Seerr `seerr`; la ricerca Jellyfin (JE) le attribuisce all'utente.
@@ -117,11 +120,12 @@ curl -s -H "X-Api-Key: $KEY" 'http://127.0.0.1:5056/api/v1/request?take=5' |
 Pre: `/mnt/backup/config-backups/2026-11-17_1640`
 Post-backend: `/mnt/backup/config-backups/2026-11-17_1725-post-request`
 Post-UI: `/mnt/backup/config-backups/2026-11-17_1745-post-request`
+Post-UI minima (finale): `/mnt/backup/config-backups/2026-11-17_1826-post-request`
 
 Verifica:
 
 ```bash
-D=/mnt/backup/config-backups/2026-11-17_1745-post-request
+D=/mnt/backup/config-backups/2026-11-17_1826-post-request
 cd "$D" && sha256sum -c SHA256SUMS
 ```
 
