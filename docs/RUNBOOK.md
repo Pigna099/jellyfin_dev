@@ -105,7 +105,7 @@ Note:
 ## Storage download (qBittorrent)
 
 HDD dedicato: `/dev/sda1` (1,8 T) → ext4, label `HDD_WD_1`, mount `/mnt/HDD_WD_1`.
-Cartelle: `downloads/movies`, `downloads/tv`, `downloads/incomplete` (`dante:media 2775`).
+Cartelle: `downloads/movies`, `downloads/series`, `downloads/incomplete` (`dante:media 2775`).
 
 ```bash
 findmnt /mnt/HDD_WD_1
@@ -115,7 +115,7 @@ curl -s http://127.0.0.1:8080/api/v2/app/preferences |
 curl -s http://127.0.0.1:8080/api/v2/torrents/categories |
   python3 -c 'import sys,json;d=json.load(sys.stdin);print({k:v["savePath"] for k,v in d.items()})'
 # atteso: radarr -> /mnt/HDD_WD_1/downloads/movies
-#         tv-sonarr -> /mnt/HDD_WD_1/downloads/tv
+#         tv-sonarr -> /mnt/HDD_WD_1/downloads/series
 ```
 
 Per spostare torrent esistenti:
@@ -129,7 +129,7 @@ for H in $HASHES; do
 done
 ```
 
-Per le serie usare `category=tv-sonarr` e `location=/mnt/HDD_WD_1/downloads/tv`.
+Per le serie usare `category=tv-sonarr` e `location=/mnt/HDD_WD_1/downloads/series`.
 
 Formattazione/mount (solo se serve rifare): script `scripts/setup-hdd-wd1.sh`, da eseguire nel namespace host con Jellyfin/Plex fermati. Il vecchio mount NTFS `/mnt/media/HDD_WD_1` è stato rimosso.
 
@@ -165,12 +165,12 @@ Post-backend: `/mnt/backup/config-backups/2026-11-17_1725-post-request`
 Post-UI: `/mnt/backup/config-backups/2026-11-17_1745-post-request`
 Post-UI minima: `/mnt/backup/config-backups/2026-11-17_1826-post-request`
 Full pre-HDD: `/mnt/backup/2026-11-17_1905`
-Storage post-HDD: `/mnt/backup/config-backups/2026-11-17_1925-hdd`
+Storage post-HDD: `/mnt/backup/config-backups/2026-11-17_1935-hdd`
 
 Verifica:
 
 ```bash
-for D in /mnt/backup/config-backups/2026-11-17_1826-post-request /mnt/backup/2026-11-17_1905 /mnt/backup/config-backups/2026-11-17_1925-hdd; do
+for D in /mnt/backup/config-backups/2026-11-17_1826-post-request /mnt/backup/2026-11-17_1905 /mnt/backup/config-backups/2026-11-17_1935-hdd; do
   echo "== $D"; (cd "$D" && sha256sum -c SHA256SUMS | tail -3)
 done
 ```

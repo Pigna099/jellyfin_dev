@@ -26,10 +26,10 @@ mount "$MNT"
 findmnt "$MNT"
 
 echo "=== DOWNLOAD DIRS ==="
-mkdir -p "$MNT/downloads/movies" "$MNT/downloads/tv" "$MNT/downloads/incomplete"
+mkdir -p "$MNT/downloads/movies" "$MNT/downloads/series" "$MNT/downloads/incomplete"
 chown -R dante:media "$MNT"
-chmod 2775 "$MNT" "$MNT/downloads" "$MNT/downloads/movies" "$MNT/downloads/tv" "$MNT/downloads/incomplete"
-ls -ld "$MNT" "$MNT/downloads" "$MNT/downloads/movies" "$MNT/downloads/tv" "$MNT/downloads/incomplete"
+chmod 2775 "$MNT" "$MNT/downloads" "$MNT/downloads/movies" "$MNT/downloads/series" "$MNT/downloads/incomplete"
+ls -ld "$MNT" "$MNT/downloads" "$MNT/downloads/movies" "$MNT/downloads/series" "$MNT/downloads/incomplete"
 df -h "$MNT"
 
 # Il vecchio mountpoint annidato non serve più.

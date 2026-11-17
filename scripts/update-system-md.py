@@ -86,7 +86,7 @@ Note:
 - **`HDD_WD_1` riformattato ext4 il 2026-11-17** (era NTFS con archivio `FILM_T`/`SERIE_T`). Label `HDD_WD_1`, UUID `68539746-f015-492c-bf94-9242032daceb`, fstab `defaults,noatime`.
 - Struttura download:
   - `/mnt/HDD_WD_1/downloads/movies`
-  - `/mnt/HDD_WD_1/downloads/tv`
+  - `/mnt/HDD_WD_1/downloads/series`
   - `/mnt/HDD_WD_1/downloads/incomplete`
   - proprietario `dante:media`, mode `2775`.
 - Il vecchio mount annidato `/mnt/media/HDD_WD_1` è stato rimosso. La copia pre-formattazione dei media è in `/mnt/backup/current/HDD_WD_1` (1,3 T).
@@ -150,7 +150,7 @@ SECTION6 = """
 | Categoria | Save path |
 |---|---|
 | `radarr` | `/mnt/HDD_WD_1/downloads/movies` |
-| `tv-sonarr` | `/mnt/HDD_WD_1/downloads/tv` |
+| `tv-sonarr` | `/mnt/HDD_WD_1/downloads/series` |
 | `music` | `/mnt/media/downloads/music` |
 
 - Il 2026-11-17 sono stati spostati 22 torrent film + 12 serie sul nuovo HDD con `setLocation`.

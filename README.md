@@ -179,7 +179,7 @@ Impostazioni principali: URL Seerr, API key, auto-approve famiglia, niente 4K.
 | Post-UI | `/mnt/backup/config-backups/2026-11-17_1745-post-request` | Seerr config+DB, tutti i plugin Jellyfin (JE, Bridge, Custom Tabs, File Transformation), DB/config Jellyfin, compose/.env |
 | Post-UI minima (finale) | `/mnt/backup/config-backups/2026-11-17_1826-post-request` | Seerr config+DB, plugin/DB/config Jellyfin, compose/.env |
 | Full pre-HDD | `/mnt/backup/2026-11-17_1905` | Jellyfin, Seerr, *arr, qBittorrent, Nginx, Let's Encrypt, WireGuard, systemd |
-| Storage post-HDD | `/mnt/backup/config-backups/2026-11-17_1925-hdd` | qBittorrent config, fstab, path/categorie |
+| Storage post-HDD | `/mnt/backup/config-backups/2026-11-17_1935-hdd` | qBittorrent config, fstab, path/categorie (`series`) |
 
 Tutti hanno `SHA256SUMS` verificato e DB con `PRAGMA integrity_check = ok`.
 
@@ -196,7 +196,7 @@ Configurazione definitiva:
 - `/dev/sda1` formattato **ext4**, label `HDD_WD_1`, montato su `/mnt/HDD_WD_1` (1,8 TB, ~1,7 TB liberi);
 - qBittorrent `save_path` → `/mnt/HDD_WD_1/downloads`;
 - categoria `radarr` → `/mnt/HDD_WD_1/downloads/movies`;
-- categoria `tv-sonarr` → `/mnt/HDD_WD_1/downloads/tv`;
+- categoria `tv-sonarr` → `/mnt/HDD_WD_1/downloads/series`;
 - 22 torrent film + 12 serie spostati sul nuovo HDD con `setLocation`;
 - root libero: ~36 GB; `/mnt/media` libero: ~4,7 TB.
 
