@@ -73,7 +73,6 @@ ssh 192.168.1.30
 STAMP=$(date +%Y-%m-%d_%H%M)
 docker run --rm -e STAMP="$STAMP" \
   -v /srv/jellyfin/config:/src/jellyfin:ro \
-  -v /srv/seerr/config:/src/seerr:ro \
   -v /var/lib/radarr:/src/radarr:ro \
   -v /var/lib/sonarr:/src/sonarr:ro \
   -v /var/lib/prowlarr:/src/prowlarr:ro \
@@ -95,12 +94,16 @@ docker run --rm -e STAMP="$STAMP" \
 
 Il backup finisce in `/mnt/backup/config-backups/<timestamp>/` con `SHA256SUMS` e `MANIFEST.txt`.
 
+> Se Seerr è già installato, aggiungi anche `-v /srv/seerr/config:/src/seerr:ro` per includerlo.
+> Dopo l'installazione usare `scripts/backup-post-change.sh` per lo snapshot di Seerr + Jellyfin Enhanced + DB Jellyfin.
+
 ### 2. Seerr
 
 ```bash
 # Sul server
 mkdir -p /home/dante/docker/seerr
-scp deploy/seerr/docker-compose.yml 192.168.1.30:/home/dante/docker/seerr/
+scp deploy/seerr/docker-compose.yml deploy/seerr/.env.example 192.168.1.30:/home/dante/docker/seerr/
+scp scripts/setup-jellyfin-seerr-user.py scripts/setup-seerr.py scripts/configure-je.py 192.168.1.30:/home/dante/docker/seerr/
 ssh 192.168.1.30
 docker run --rm -v /srv:/srv alpine:3.20 sh -c \
   'mkdir -p /srv/seerr/config && chown -R 1000:1000 /srv/seerr && chmod 700 /srv/seerr /srv/seerr/config'
